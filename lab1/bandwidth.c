@@ -58,7 +58,7 @@ void run_process_even(int my_id)
       start_time = MPI_Wtime();
       MPI_Send(&messages, 1, MPI_DOUBLE, my_id+1, TAG, 
 MPI_COMM_WORLD); 
-      MPI_Recv(&result, 1, MPI_DOUBLE, my_id+1, TAG, MPI_COMM_WORLD, 
+      MPI_Recv(&result,   1, MPI_DOUBLE, my_id+1, TAG, MPI_COMM_WORLD, 
 &status);
       end_time = MPI_Wtime();
       diff = end_time - result;
@@ -102,7 +102,7 @@ void run_process_odd(int my_id)
         messages[j] = start_time;
       
       start_time = MPI_Wtime();
-      MPI_Recv(&result, 1, MPI_DOUBLE, my_id-1, TAG, MPI_COMM_WORLD, 
+      MPI_Recv(&result,   1, MPI_DOUBLE, my_id-1, TAG, MPI_COMM_WORLD, 
 &status);
       MPI_Send(&messages, 1, MPI_DOUBLE, my_id-1, TAG, 
 MPI_COMM_WORLD); 
