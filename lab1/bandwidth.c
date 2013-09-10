@@ -8,6 +8,7 @@
 
 void run_process_even(int);
 void run_process_odd(int);
+void compute_avg_bandwidth(double ** bandwidths, int my_id);
 
 int main (int argc, char **argv)
 {
@@ -66,20 +67,7 @@ MPI_COMM_WORLD);
     free(messages);
   }
 
-  double total = 0.0;
-
-  for(msg_sz=0; msg_sz<MSG_MAX; ++msg_sz)
-  {
-    total = 0.0;
-    int i;
-    for (i=0; i<ITERATIONS; ++i)
-    {
-      total += bandwidths[msg_sz][i];
-    }
-    printf("average bandwidth for p%d sz %d: %e\n", my_id, (msg_sz+1), 
-(msg_sz+1) * sizeof(double) / (total / ITERATIONS));
-  }
-
+  compute_avg_bandwidth(bandwidths, my_id);
   free(bandwidths);
 }
 
@@ -125,8 +113,15 @@ MPI_COMM_WORLD);
     free(messages);
   }
 
+  compute_avg_bandwidth(bandwidths, my_id);
+  free(bandwidths);
+}
+
+void compute_avg_bandwidth(double ** bandwidths, int my_id)
+{
   double total = 0.0;
 
+  int msg_sz;
   for(msg_sz=0; msg_sz<MSG_MAX; ++msg_sz)
   {
     total = 0.0;
@@ -135,9 +130,7 @@ MPI_COMM_WORLD);
     {
       total += bandwidths[msg_sz][i];
     }
-    printf("average bandwidth for p%d sz %d: %e\n", my_id, (msg_sz+1), 
+    printf("Average bandwidth for p%d sz %d: %e bytes/s\n", my_id, (msg_sz+1), 
 (msg_sz+1) * sizeof(double) / (total / ITERATIONS));
   }
-
-  free(bandwidths);
 }
