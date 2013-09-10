@@ -1,0 +1,49 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <mpi.h>
+#include <time.h>
+
+#define N_V 100000
+
+int main (int argc, char **argv)
+{
+  int sz;
+  
+  MPI_Init (&argc, &argv);
+  MPI_Comm_size (MPI_COMM_WORLD, &sz);
+
+  double comp, start_time, end_time, total, current, diff;
+  double * v1 = malloc(sizeof(double) * N_V);
+  double * v2 = malloc(sizeof(double) * N_V);
+  
+  srand(time(NULL));
+
+  int k;
+
+  for(k=0; k<N_V; ++k) 
+  {
+    v1[k] = rand()/(double) RAND_MAX;
+    v2[k] = rand()/(double) RAND_MAX;
+    
+  }
+  
+  start_time = MPI_Wtime();
+  
+  total = 0;
+  for(k=0; k<N_V; ++k)
+  {
+      current = v1[k]*v2[k];
+      total += current;
+  }
+
+  end_time = MPI_Wtime();
+  diff = end_time - start_time;
+    
+  comp = diff / (2 * N_V);
+
+  printf("Computational time per operation: %e seconds\n", comp); 
+
+  MPI_Finalize ();
+  exit (0);
+}
+
