@@ -1,23 +1,41 @@
-#include <math.h>
-#include <gmp.h>
 #include "mw_api.h"
-#include "def_structs.h"
+#include "def_structs_part2.h"
+#include <gmp.h>
+#include <math.h>
 
-mw_work_t ** create_work(int argc, char ** arv)
+#define LARGE_NUM "4294960296"
+
+mw_work_t ** create_work(int argc, char ** argv)
 {
-  mw_work_t ** work_list = calloc(100, sizeof(mw_work_t*));
-  int i=0;
-  for(i=0; i<25; ++i)
+  mpz_t num, sqrt_num_floor, i;
+  mpf_t numf, sqrt_num;
+
+  mpz_init(num);
+  mpf_set_default_prec (10000);
+  mpf_init(sqrt_num);
+  mpz_init(sqrt_num_floor);
+  mpz_init(i);
+  
+  mpz_set_str(num, LARGE_NUM, 10);
+  mpf_set_z(numf, num);
+  mpf_sqrt(sqrt_num, numf);
+  mpz_set_f(sqrt_num_floor, sqrt_num);
+
+  //int num_granules = *argv[1];
+
+  mw_work_t ** work_list = malloc(1*sizeof(mw_work_t*));
+  /*int i=0;
+  for(i=0; i<num_granules; ++i)
   {
     work_list[i] = malloc(sizeof(mw_work_t));
     work_list[i]->x = i;
-  }
+    }*/
   return work_list;
 }
 
 int process_results(int sz, mw_result_t * res)
 {
-  int i;
+  /*  int i;
   for(i=0; i<sz; ++i)
   {
     printf("%f\n", res[i].k);
@@ -25,20 +43,19 @@ int process_results(int sz, mw_result_t * res)
       printf("Found some pi!\n");
     else
       printf("No pi here :(\n");
-  }
+   }*/
 }
 
 mw_result_t * do_work(mw_work_t * work)
 {
-	mw_result_t * result = malloc(sizeof(mw_result_t));
+  /*mw_result_t * result = malloc(sizeof(mw_result_t));
 	result->k = M_PI;
 	printf("created result %f\n", M_PI);
-	return result;
+	return result;*/ return NULL;
 }
 
 int main (int argc, char **argv)
 {
-  printf(argv[1]);
   struct mw_api_spec f;
 
   MPI_Init (&argc, &argv);
