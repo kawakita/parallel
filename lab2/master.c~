@@ -24,6 +24,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         if (received_results == NULL)
         {
           free(received_results);
+          return NULL;
         }
 
 	int num_results_received = 0;

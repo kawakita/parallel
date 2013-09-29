@@ -30,10 +30,10 @@ int process_results(int sz, mw_result_t * res)
 
 mw_result_t * do_work(mw_work_t * work)
 {
-	mw_result_t * result = malloc(sizeof(mw_result_t));
-	result->k = M_PI;
-	printf("created result %f\n", M_PI);
-	return result;
+  mw_result_t * result = malloc(sizeof(mw_result_t));
+  result->k = M_PI;
+  printf("created result %f\n", M_PI);
+  return result;
 }
 
 int main (int argc, char **argv)

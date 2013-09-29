@@ -38,7 +38,7 @@ mw_result_t * do_work(mw_work_t * work)
 
 int main (int argc, char **argv)
 {
-  printf(argv[1]);
+  printf(argv[0]);
   struct mw_api_spec f;
 
   MPI_Init (&argc, &argv);
