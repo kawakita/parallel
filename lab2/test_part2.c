@@ -19,7 +19,7 @@ mw_work_t ** create_work(int argc, char ** argv)
   mpz_init_set_ui(one, 1);
 
   // take in command line arg for number of elements per unit of work
-  unsigned int num_elt_per_work = atoi(argv[1]);
+  unsigned int num_elt_per_work = (unsigned int) atoi(argv[1]);
   mpz_init_set_ui(num_elt_per_work_unit, num_elt_per_work);
 
   // set initial LARGE_NUM to find factors
@@ -27,20 +27,22 @@ mw_work_t ** create_work(int argc, char ** argv)
 
   // start possible factors at 2
   mpz_init_set_ui(num_begin, 2);   
-  
+
   // end possible factors at sqrt(large_num)
   mpf_set_default_prec (10000);
   mpf_init(large_numf);
   mpf_set_z(large_numf, large_num);
+  mpf_init(sqrt_large_num);
   mpf_sqrt(sqrt_large_num, large_numf);
   mpz_init(num_end);
   mpz_set_f(num_end, sqrt_large_num);
 
   // determine number of work units required for complete list of work
   // given num elts per work unit
-  mpz_init(num_work_units);
+  mpz_init(large_num_min_num_begin);
   mpz_sub(large_num_min_num_begin, large_num, num_begin);
   // divide large_num-num_begin by num_elt_per_work_unit to get num_work_units
+  mpz_init(num_work_units);
   mpz_div(num_work_units, large_num_min_num_begin, num_elt_per_work_unit);
 
   // determine if an extra work unit is needed when large_num isn't divisible by num_elt_per_work_unit
@@ -92,11 +94,13 @@ mw_work_t ** create_work(int argc, char ** argv)
     // reset num_begin to one more than num_end for next work unit
     mpz_add(num_begin, sum, one);
   }
+  gmp_printf("test: %Zd\n", num_work_units);
   return work_list;
 }
 
 int process_results(int sz, mw_result_t * res)
 {
+  /*
   mpz_t* results = malloc(sizeof(mpz_t));
   if (results == NULL)
   {
@@ -135,12 +139,13 @@ int process_results(int sz, mw_result_t * res)
   mpz_t* minimized = malloc(n*sizeof(mpz_t));
   memcpy(minimized, results, n);
   free(results);
-
+*/
   return 1;
 }
 
 mw_result_t * do_work(mw_work_t * work)
 {
+  /*
   mpz_t mod, zero, i;
   mpz_init(mod);
   mpz_init_set_ui(zero,0);
@@ -192,11 +197,20 @@ mw_result_t * do_work(mw_work_t * work)
   result->f = minimized;
   result->n = n;
   return result;
+  */
+  return NULL;
 }
 
 int main (int argc, char **argv)
 {
   struct mw_api_spec f;
+
+  // check command line args
+  if (argc != 2)
+  {
+    printf("Invalid input. Provide the granularity, number of elements per unit of work.\n");
+    return;
+  }
 
   MPI_Init (&argc, &argv);
 
