@@ -18,11 +18,17 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 	
 	mw_work_t ** work_list;
 
+	printf("argc: %d\n", argc);
+	int i;
+	for(i=0;  i<argc; ++i)
+	{
+		printf("arg[%d]: %s\n",i, argv[i]);
+	}
 	DEBUG_PRINT("creating work list...");
 	work_list = f->create(argc, argv);
 	DEBUG_PRINT("created work!");
 
-	int i=0, slave=1, num_work_units=0;
+	int slave=1, num_work_units=0;
 
 	num_work_units = get_total_units(work_list);
 

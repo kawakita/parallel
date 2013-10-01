@@ -80,7 +80,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm)
 {
-	gmp_printf("sending work %Zd to %d\n", work->start, slave);
+  //gmp_printf("sending work %Zd to %d\n", work->start, slave);
 	MPI_Send(work, size, datatype, slave, tag, comm);
 	DEBUG_PRINT("Sent!");
 }

@@ -5,14 +5,18 @@
 
 struct userdef_work_t
 {
+  char nums[1000];
+  /*
   mpz_t num;
   mpz_t start;
   mpz_t end;
+  */
 };
 
 struct userdef_result_t
 {
   mpz_t* f;
+  unsigned int n;
 };
 
 #endif

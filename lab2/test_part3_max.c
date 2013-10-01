@@ -7,23 +7,20 @@
 
 mw_work_t ** create_work(int argc, char ** argv)
 {
-
-  int n_work_units = atoi(argv[1]); //number of units of work the user wishes to divide into
+  DEBUG_PRINT("creating work ...");
+  int n_work_units = atoi(argv[2]); //number of units of work the user wishes to divide into
   int line_size = 6; //assume no ints are longer than 6 digits
   int n_ints = 0; //number of lines in the file
   int sz = 2;
   int *all_ints = malloc(sz*sizeof(int)); //array of all ints in the file
   char line[line_size];  //current line in the file
-  char *infile = argv[2]; //name of file with ints
+  char *infile = argv[1]; //name of file with ints
   mw_work_t ** work_list = calloc(n_work_units, sizeof(mw_work_t*)); //array of work units
   FILE *f; //file with the ints
 
   //OPEN file
   f = fopen(infile,"r");
-  if (f == NULL) {
-    printf("File not found");
-    return work_list;
-  }
+  DEBUG_PRINT("Opened file");
 
   //read lines into an array
   //array is a resizing array which doubles to grow
@@ -35,6 +32,7 @@ mw_work_t ** create_work(int argc, char ** argv)
     all_ints[n_ints] = atoi(strdup(line));
     n_ints++;
   }
+  DEBUG_PRINT("Read file");
 
   //if the user specifies too many units of work relative to the file size
   if (n_ints/2 < n_work_units)
@@ -46,6 +44,9 @@ mw_work_t ** create_work(int argc, char ** argv)
   int work_num = 0;
 
   while(work_num<n_work_units) {
+  	printf("creating work unit %d of %d\n", work_num, n_work_units);
+
+	work_list[work_num] = malloc(sizeof(mw_work_t));
 
     work_list[work_num]->inp = all_ints;
     work_list[work_num]->start = work_num*ints_per_work_unit;
@@ -71,7 +72,8 @@ mw_result_t * do_work(mw_work_t * work)
    for (i = start+1; i<= end; i++)
      if (a[i] > max)
 	max = a[i];
-   result->max = max;
+        result->max = max;
+   
    return result;
 }
 
@@ -83,8 +85,8 @@ int process_results(int sz, mw_result_t * res)
   int max = res[0].max;
   for(i=1; i<sz; i++)
   {
-	 if (res[i].max > max)
-	 	max = res[i].max;
+    if (res[i].max > max)
+	max = res[i].max;
   }
 
   printf("%d",max);

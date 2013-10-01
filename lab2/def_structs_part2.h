@@ -5,9 +5,7 @@
 
 struct userdef_work_t
 {
-  mpz_t num;
-  mpz_t start;
-  mpz_t end;
+  char nums[1000];
 };
 
 struct userdef_result_t

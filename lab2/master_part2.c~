@@ -46,7 +46,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 			break;
 		}
 		send_to_slave(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
-		MPI_Send(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
+		//MPI_Send(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
 		DEBUG_PRINT("work sent to slave");
 	}
 

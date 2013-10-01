@@ -6,7 +6,63 @@
 #include <string.h>
 #include <assert.h>
 
-#define LARGE_NUM "40"
+#define LARGE_NUM "100"
+
+char* mpz_to_buffer(char* buf, mpz_t num, mpz_t begin, mpz_t end)
+{
+  char* num_str = mpz_get_str(buf, 10, num);
+  gmp_printf("mpz num: %Zd\n", num);
+  printf("buf send: %s\n",num_str);
+  char* begin_str = mpz_get_str(buf+strlen(num_str)+1, 10, begin);
+  printf("beg send: %s\n",begin_str);
+  char* end_str = mpz_get_str(buf+strlen(num_str)+strlen(begin_str)+2, 10, end);
+  printf("end send: %s\n",end_str);
+  return buf;
+}
+
+mpz_t* buffer_to_mpz(char* buf)
+{
+  int i = 0;
+  while (buf[i] != '\0')
+  {
+    i++;
+  }
+  char* num_str = malloc((i+1)*sizeof(char));
+  strncpy(num_str, buf, i);
+  num_str[i] = '\0';
+  printf("num_str: %s\n", num_str);
+
+  i++;
+  int j = 0;
+  while (buf[i+j] != '\0')
+  {
+    j++;
+  }
+  char* begin_str = malloc((j+1)*sizeof(char));
+  strncpy(begin_str, buf+i+1, j);
+  begin_str[j] = '\0';
+
+  j++;
+  int k = 0;
+  while (buf[i+j+k] != '\0')
+  {
+    k++;
+  }
+  char* end_str = malloc((k+1)*sizeof(char));
+  strncpy(end_str, buf+i+j+1, k);
+  end_str[k] = '\0';
+
+  mpz_t* nums = malloc(3*sizeof(mpz_t));
+  mpz_init_set_str(nums[0], num_str, 10);
+  mpz_init_set_str(nums[1], begin_str, 10);
+  mpz_init_set_str(nums[2], end_str, 10);
+
+  free(num_str);
+  free(begin_str);
+  free(end_str);
+
+  return nums;
+}
 
 mw_work_t ** create_work(int argc, char ** argv)
 {
@@ -19,7 +75,7 @@ mw_work_t ** create_work(int argc, char ** argv)
     num_elt_per_work_unit, 
 	mod,
     num_work_units, 
-	large_num_min_num_begin, 
+	num_end_min_num_begin, 
 	sum;
   
   mpf_t      
@@ -51,15 +107,15 @@ mw_work_t ** create_work(int argc, char ** argv)
 
   // determine number of work units required for complete list of work
   // given num elts per work unit
-  mpz_init(large_num_min_num_begin);
-  mpz_sub(large_num_min_num_begin, large_num, num_begin);
-  // divide large_num-num_begin by num_elt_per_work_unit to get num_work_units
+  mpz_init(num_end_min_num_begin);
+  mpz_sub(num_end_min_num_begin, num_end, num_begin);
+  // divide num_end-num_begin by num_elt_per_work_unit to get num_work_units
   mpz_init(num_work_units);
-  mpz_div(num_work_units, large_num_min_num_begin, num_elt_per_work_unit);
+  mpz_div(num_work_units, num_end_min_num_begin, num_elt_per_work_unit);
 
   // determine if an extra work unit is needed when large_num isn't divisible by num_elt_per_work_unit
   mpz_init(mod);
-  mpz_mod(mod, large_num_min_num_begin, num_elt_per_work_unit);
+  mpz_mod(mod, num_end_min_num_begin, num_elt_per_work_unit);
   // if mod not zero, add one
   if (mpz_cmp(mod, zero) > 0)
     mpz_add(num_work_units, num_work_units, one);
@@ -95,9 +151,7 @@ mw_work_t ** create_work(int argc, char ** argv)
 
     if (i == (num_work-1))
     {
-      mpz_init_set(work_list[i]->num, large_num);
-      mpz_init_set(work_list[i]->start, num_begin);      
-      mpz_init_set(work_list[i]->end, num_end);        
+      mpz_to_buffer(work_list[i]->nums, large_num, num_begin, num_end);
     }
     // create null-terminated work
     else if (i == num_work)
@@ -106,10 +160,8 @@ mw_work_t ** create_work(int argc, char ** argv)
     }
     else
     {
-      mpz_init_set(work_list[i]->num, large_num);
-      mpz_init_set(work_list[i]->start, num_begin);
       mpz_add(sum, num_begin, num_elt_per_work_unit);    
-      mpz_init_set(work_list[i]->end, sum);
+      mpz_to_buffer(work_list[i]->nums, large_num, num_begin, sum);
     }
 
     //gmp_printf("num_begin: %Zd\n", num_begin);
@@ -170,6 +222,16 @@ int process_results(int sz, mw_result_t * res)
 mw_result_t * do_work(mw_work_t * work)
 {
   DEBUG_PRINT("Doing work...");
+  mpz_t* nums = buffer_to_mpz(work->nums);
+  mpz_t num, start, end; 
+  mpz_init_set(num, nums[0]);
+  mpz_init_set(start, nums[1]);
+  mpz_init_set(end, nums[2]);
+
+  gmp_printf("num %Zd\n", num);
+  gmp_printf("start %Zd\n", start);
+  gmp_printf("end %Zd\n", end);
+
   mpz_t mod, zero, i;
   mpz_init(mod);
   mpz_init_set_ui(zero,0);
@@ -181,20 +243,17 @@ mw_result_t * do_work(mw_work_t * work)
   if (factors == NULL)
   {
     free(factors);
-    return NULL;
+    return;
   }
 
   // check if divisors from start to end are factors of num
-  DEBUG_PRINT("checking for null");
-  assert(work->start != NULL);
   DEBUG_PRINT("It's not null");
-  gmp_printf("starting at %Zd\n", work->start);
-  mpz_init_set(i, work->start);
+  mpz_init_set(i, start);
   DEBUG_PRINT("Searching for factors");
-  for (; mpz_cmp(i,work->end); mpz_add_ui(i,i,1))
+  for (; mpz_cmp(i,end); mpz_add_ui(i,i,1))
   {
   	DEBUG_PRINT("computing mod");
-    mpz_mod(mod, work->num, i);
+    mpz_mod(mod, num, i);
   	DEBUG_PRINT("computed mod");
     if (mpz_cmp(mod, zero) == 0)
     {
