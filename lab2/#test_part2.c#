@@ -56,7 +56,7 @@ mw_work_t ** create_work(int argc, char ** argv)
   gmp_printf("num_work_units: %Zd\n", num_work_units);
 
   unsigned int num_work = mpz_get_ui(num_work_units);
-
+  
   // sum for incrementing num_begin and num_end
   mpz_init(sum);
 
@@ -64,27 +64,30 @@ mw_work_t ** create_work(int argc, char ** argv)
   mw_work_t ** work_list = malloc((num_work+1)*sizeof(mw_work_t*));
   if (work_list == NULL)
   {
-    printf("inside here\n");
     free(work_list);
     return NULL;
   }
   printf("here\n");
 
+  // decrement  num_elt_per_work_unit by 1
+  mpz_sub(num_elt_per_work_unit, num_elt_per_work_unit, one);
+
   unsigned int i=0;
-  for(i=0; i<=num_work; ++i)
+  for(i=0; i<=num_work; i++)
   {
+    printf("i: %d\n", i);
     work_list[i] = malloc(sizeof(mw_work_t));
     if (work_list[i] == NULL)
     {
       free(work_list[i]);
       return NULL;
     }
-    mpz_set(work_list[i]->num, large_num);
-    mpz_set(work_list[i]->start, num_begin);
 
     if (i == (num_work-1))
     {
-      mpz_set(work_list[i]->end, num_end);        
+      mpz_init_set(work_list[i]->num, large_num);
+      mpz_init_set(work_list[i]->start, num_begin);      
+      mpz_init_set(work_list[i]->end, num_end);        
     }
     // create null-terminated work
     else if (i == num_work)
@@ -93,8 +96,10 @@ mw_work_t ** create_work(int argc, char ** argv)
     }
     else
     {
+      mpz_init_set(work_list[i]->num, large_num);
+      mpz_init_set(work_list[i]->start, num_begin);
       mpz_add(sum, num_begin, num_elt_per_work_unit);    
-      mpz_set(work_list[i]->end, sum);
+      mpz_init_set(work_list[i]->end, sum);
     }
 
     gmp_printf("num_begin: %Zd\n", num_begin);
@@ -109,7 +114,6 @@ mw_work_t ** create_work(int argc, char ** argv)
 
 int process_results(int sz, mw_result_t * res)
 {
-  /*
   mpz_t* results = malloc(sizeof(mpz_t));
   if (results == NULL)
   {
@@ -148,8 +152,6 @@ int process_results(int sz, mw_result_t * res)
   mpz_t* minimized = malloc(n*sizeof(mpz_t));
   memcpy(minimized, results, n);
   free(results);
-*/
-  return 1;
 }
 
 mw_result_t * do_work(mw_work_t * work)

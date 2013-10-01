@@ -5,6 +5,12 @@
 #include <mpi.h>
 #include <stdlib.h>
 
+#ifdef NDEBUG
+	#define DEBUG_PRINT(x) (void) 0
+#else
+	#define DEBUG_PRINT(x) printf("DEBUG: %s\n", x)
+#endif
+
 struct userdef_work_t; /* definition provided by user */
 struct userdef_result_t; /* definition provided by user */
 typedef struct userdef_work_t mw_work_t;
