@@ -18,8 +18,14 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 	
 	mw_work_t ** work_list;
 
+        double start, end, start_create, end_create, start_results, end_results;
+
+        start = MPI_Wtime();
+
 	DEBUG_PRINT("creating work list...");
+        start_create = MPI_Wtime();
 	work_list = f->create(argc, argv);
+        end_create = MPI_Wtime();
 	DEBUG_PRINT("created work!");
 
 	int i=0, slave=1, num_work_units=0;
@@ -73,8 +79,17 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 		DEBUG_PRINT("Murdering slave");
 		kill_slave(slave);
 	}
-
+        
+        start_results = MPI_Wtime();
 	int err_code = f->result(num_results_received, received_results);
+        end_results = MPI_Wtime();
+
+        end = MPI_Wtime();
+        
+        printf("all %f s\n", end-start);
+        printf("create %f s\n", end_create-start_create);
+        printf("process %f s\n", end_results-start_results);
+
 }
 
 

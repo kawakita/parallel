@@ -1,11 +1,11 @@
 #include <math.h>
 #include <gmp.h>
 #include "mw_api.h"
-#include "def_structs.h"
+#include "def_structs_part1.h"
 
 mw_work_t ** create_work(int argc, char ** arv)
 {
-  mw_work_t ** work_list = calloc(100, sizeof(mw_work_t*));
+  mw_work_t ** work_list = calloc(25, sizeof(mw_work_t*));
   int i=0;
   for(i=0; i<25; ++i)
   {
@@ -38,7 +38,7 @@ mw_result_t * do_work(mw_work_t * work)
 
 int main (int argc, char **argv)
 {
-  printf(argv[0]);
+  printf("hello\n");
   struct mw_api_spec f;
 
   MPI_Init (&argc, &argv);

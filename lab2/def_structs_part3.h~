@@ -3,13 +3,14 @@
 
 struct userdef_work_t
 {
-	int *inp;
-	
+  char *filename;
+  int first_line;
+  int lines_each;
 };
 
 struct userdef_result_t
 {
-	int *res;
+  int max;
 };
 
 #endif

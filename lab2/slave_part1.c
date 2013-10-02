@@ -11,7 +11,6 @@ void be_a_slave(struct mw_api_spec *f)
   while(1)
   {
     MPI_Recv(&work, f->work_sz, MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-	DEBUG_PRINT("Slave received work!");
 	if(status.MPI_TAG == KILL_TAG)
 	{
 		return;
@@ -19,7 +18,8 @@ void be_a_slave(struct mw_api_spec *f)
 
     computedResult = f->compute(&work);
 
+	DEBUG_PRINT("Sending result back!");
     MPI_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD);
-	DEBUG_PRINT("Slave completed work!");
+	DEBUG_PRINT("result sent");
   }
 }

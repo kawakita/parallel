@@ -1,5 +1,4 @@
 #include <stdio.h>
-
 #include "mw.h"
 #include "def_structs_part2.h"
 
@@ -61,6 +60,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 		DEBUG_PRINT("Waiting to receive a result...");
 		MPI_Status status;
 		MPI_Recv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+		DEBUG_PRINT("Received a result!");
 		num_results_received++;
 		send_to_slave(work_list[i], f->work_sz, MPI_CHAR, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
 		i++;
@@ -71,8 +71,11 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 		DEBUG_PRINT("Waiting to receive a result...");
 		MPI_Status status;
 		MPI_Recv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+		DEBUG_PRINT("Received a result!");
 		num_results_received++;
 	}
+
+	DEBUG_PRINT("Received all results!");
 
 	for(slave=1; slave<number_of_slaves; ++slave)
 	{
@@ -86,6 +89,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm)
 {
+	DEBUG_PRINT("Sending!!");
 	MPI_Send(work, size, datatype, slave, tag, comm);
 	DEBUG_PRINT("Sent!");
 }

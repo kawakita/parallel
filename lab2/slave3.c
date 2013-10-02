@@ -1,6 +1,6 @@
 #include "mw.h"
 #include "mw_api.h"
-#include "def_structs_part1.h"
+#include "def_structs_part3.h"
 
 void be_a_slave(struct mw_api_spec *f)
 {

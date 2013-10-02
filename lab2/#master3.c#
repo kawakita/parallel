@@ -1,16 +1,24 @@
 #include <stdio.h>
 #include "mw.h"
-#include "def_structs_part2.h"
+#include "def_structs_part3.h"
 
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
 void kill_slave(int slave);
 int get_total_units(mw_work_t ** work_list);
 
+void print_work(mw_work_t * work)
+{
+	printf("Printing work unit at address: %lu\n", (unsigned long) work);
+	printf("\tfilename: %s\n", work->filename);
+	printf("\tfirst line: %d\n", work->first_line);
+	printf("\tlines each: %d\n", work->lines_each);
+}
+
 void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
 
-	DEBUG_PRINT("master starting");
-
+  DEBUG_PRINT("master starting");
+  double start = MPI_Wtime();
 	int number_of_slaves;
 
 	MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
@@ -25,12 +33,12 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 	}
 	DEBUG_PRINT("creating work list...");
 	work_list = f->create(argc, argv);
+	//print_work(work_list[0]);
 	DEBUG_PRINT("created work!");
 
 	int slave=1, num_work_units=0;
 
 	num_work_units = get_total_units(work_list);
-
 	mw_result_t * received_results =  malloc(f->res_sz * num_work_units);
 	if (received_results == NULL)
 	{
@@ -40,6 +48,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
 	int num_results_received = 0;
 
+	i=0;
 	for(slave=1; slave<number_of_slaves; ++slave)
 	{
 		DEBUG_PRINT("assigning work to slave");
@@ -50,7 +59,10 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 			DEBUG_PRINT("reached the end of the work, breaking!");
 			break;
 		}
+                //printf("%ul is my numba\n",(unsigned long)work_unit);
+                //printf("%d is my first line\n", work_unit->lines_each);
 		send_to_slave(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
+
 		//MPI_Send(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
 		DEBUG_PRINT("work sent to slave");
 	}
@@ -73,22 +85,26 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 		num_results_received++;
 	}
 
-	for(slave=1; slave<number_of_slaves; ++slave)
+
+        for(slave=1; slave<number_of_slaves; ++slave)
 	{
 		DEBUG_PRINT("Murdering slave");
 		kill_slave(slave);
 	}
-
+       
 	int err_code = f->result(num_results_received, received_results);
+        double elapsed_time = MPI_Wtime() - start;
+        printf("%f was my elapsed time\n", elapsed_time); 
 }
 
 
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm)
 {
-	DEBUG_PRINT("Sending!!");
-        printf("%d is the first line \n", work->first_line); 
-	MPI_Send(work, size, datatype, slave, tag, comm);
-	DEBUG_PRINT("Sent!");
+  DEBUG_PRINT("Sending!!");
+  // printf("%ul\n",(unsigned long)work);
+  //printf("%d is the first line \n", work->first_line);
+  MPI_Send(work, size, datatype, slave, tag, comm);
+  DEBUG_PRINT("Sent!");
 }
 
 int get_total_units(mw_work_t ** work_list)

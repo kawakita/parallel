@@ -6,33 +6,33 @@
 #include <string.h>
 #include <assert.h>
 
-#define LARGE_NUM "40"
+//#define LARGE_NUM "68719476736"
+#define LARGE_NUM "1024"
 
-char* mpz_to_buffer(char* buf, mpz_t num, mpz_t begin, mpz_t end)
+char* mpz_to_buffer(char* buf, mpz_t* nums, unsigned int n)
 {
-  char* num_str = mpz_get_str(buf, 62, num);
-  char* begin_str = mpz_get_str(buf+strlen(num_str)+1, 62, begin);
-  char* end_str = mpz_get_str(buf+strlen(num_str)+strlen(begin_str)+2, 62, end);
+  unsigned int i;
+  char * next_mpz_str = buf;
+  for (i=0; i<n; i++)
+  {
+    mpz_get_str(next_mpz_str, 10, nums[i]);
+    next_mpz_str += (strlen(next_mpz_str)+1);
+  }
   return buf;
 }
 
-mpz_t* buffer_to_mpz(char* buf)
+mpz_t* buffer_to_mpz(char* buf, unsigned int n)
 {
-  char* num_str, begin_str, end_str;
+  mpz_t * mpzs = malloc(sizeof(mpz_t) * n);
   int i = 0;
-  while (buf[i] != NULL)
+  while(i < n)
   {
-    
+  	mpz_init_set_str(mpzs[i], buf, 10);
+	buf += strlen(buf) + 1;
+	++i;
   }
-
-  mpz_t nums[3];
-  mpz_init_set_str(nums[0], num_str, 62);
-  mpz_init_set_str(nums[1], begin_str, 62);
-  mpz_init_set_str(nums[2], end_str, 62);
-
-  return nums;
+  return mpzs;
 }
-
 
 mw_work_t ** create_work(int argc, char ** argv)
 {
@@ -45,7 +45,7 @@ mw_work_t ** create_work(int argc, char ** argv)
     num_elt_per_work_unit, 
 	mod,
     num_work_units, 
-	large_num_min_num_begin, 
+	num_end_min_num_begin, 
 	sum;
   
   mpf_t      
@@ -63,6 +63,8 @@ mw_work_t ** create_work(int argc, char ** argv)
   // set initial LARGE_NUM to find factors
   mpz_init_set_str(large_num, LARGE_NUM, 10);
 
+  gmp_printf("%Zd\n", large_num);
+
   // start possible factors at 2
   mpz_init_set_ui(num_begin, 2);   
 
@@ -77,20 +79,18 @@ mw_work_t ** create_work(int argc, char ** argv)
 
   // determine number of work units required for complete list of work
   // given num elts per work unit
-  mpz_init(large_num_min_num_begin);
-  mpz_sub(large_num_min_num_begin, large_num, num_begin);
-  // divide large_num-num_begin by num_elt_per_work_unit to get num_work_units
+  mpz_init(num_end_min_num_begin);
+  mpz_sub(num_end_min_num_begin, num_end, num_begin);
+  // divide num_end-num_begin by num_elt_per_work_unit to get num_work_units
   mpz_init(num_work_units);
-  mpz_div(num_work_units, large_num_min_num_begin, num_elt_per_work_unit);
+  mpz_div(num_work_units, num_end_min_num_begin, num_elt_per_work_unit);
 
   // determine if an extra work unit is needed when large_num isn't divisible by num_elt_per_work_unit
   mpz_init(mod);
-  mpz_mod(mod, large_num_min_num_begin, num_elt_per_work_unit);
+  mpz_mod(mod, num_end_min_num_begin, num_elt_per_work_unit);
   // if mod not zero, add one
   if (mpz_cmp(mod, zero) > 0)
     mpz_add(num_work_units, num_work_units, one);
-
-  gmp_printf("total num_work_units: %Zd\n", num_work_units);
 
   unsigned int num_work = mpz_get_ui(num_work_units);
   
@@ -109,9 +109,8 @@ mw_work_t ** create_work(int argc, char ** argv)
   mpz_sub(num_elt_per_work_unit, num_elt_per_work_unit, one);
 
   unsigned int i=0;
-  for(i=0; i<=num_work; i++)
+  for(i=0; i<num_work; i++)
   {
-    DEBUG_PRINT("creating a new work unit");
     work_list[i] = malloc(sizeof(mw_work_t));
     if (work_list[i] == NULL)
     {
@@ -119,101 +118,85 @@ mw_work_t ** create_work(int argc, char ** argv)
       return NULL;
     }
 
+    mpz_t nums[3];
+    mpz_init_set(nums[0], large_num);
+    mpz_init_set(nums[1], num_begin);
+    mpz_add(sum, num_begin, num_elt_per_work_unit);    
+    mpz_init_set(nums[2], sum);
+
     if (i == (num_work-1))
     {
-      mpz_to_buffer(work_list[i]->nums, large_num, num_begin, num_end);
-    }
-    // create null-terminated work
-    else if (i == num_work)
-    {
-      work_list[i] = NULL;
-    }
-    else
-    {
-      mpz_add(sum, num_begin, num_elt_per_work_unit);    
-      mpz_to_buffer(work_list[i]->nums, large_num, num_begin, sum);
+      mpz_set(nums[2], num_end);
     }
 
-    //gmp_printf("num_begin: %Zd\n", num_begin);
-    //gmp_printf("sum: %Zd\n", sum);
-
+    mpz_to_buffer(work_list[i]->nums, nums, 3);
+	
     // reset num_begin to one more than num_end for next work unit
     mpz_add(num_begin, sum, one);
   }
-  gmp_printf("created %Zd work units!\n", num_work_units);
+  work_list[i] = NULL;
+
   return work_list;
 }
 
 int process_results(int sz, mw_result_t * res)
 {
-  /*
-  mpz_t* results = malloc(sizeof(mpz_t));
-  if (results == NULL)
-  {
-    free(results);
-    return 0;
-  }
-
-  unsigned int capacity = 0;
-  unsigned int n = 0;
-  unsigned int i;
+  int 
+  	num_factors = 0,
+	i=0;
+	
   for(i=0; i<sz; ++i)
   {
-    // see if capacity needs to change
-    if ((n + 1 > capacity) || (res->n > capacity))
-    {
-      if (capacity == 0)
-        capacity = 32;
-      else if (capacity <= (UINT_MAX/2))
-        capacity *= 2;
-
-      mpz_t* temp = realloc(results, capacity * sizeof(mpz_t));
-      if (temp == NULL)
-      {
-        free(temp);
-        return 0;
-      }
-      results = temp;
-    }
-    
-    // add res->f to results array
-    memcpy(results, res->f, res->n);
-    n += res->n;
+  	num_factors += res[i].n;
   }
 
-  // minimize buffer to n
-  mpz_t* minimized = malloc(n*sizeof(mpz_t));
-  memcpy(minimized, results, n);
-  free(results);
-*/
-  return 1;
+  mpz_t * all_factors = malloc(sizeof(mpz_t) * num_factors);
+
+  int current_factor = 0;
+  for(i=0; i<sz; ++i)
+  {
+    mpz_t * factors = buffer_to_mpz(res[i].nums, res[i].n);
+	int j;
+	for(j=0; j<res[i].n; ++j)
+	  mpz_init_set(all_factors[current_factor++], factors[j]);
+  }
+
+  for(i=0; i<num_factors; ++i)
+  {
+    gmp_printf("%Zd\n", all_factors[i]);
+  }
 }
 
 mw_result_t * do_work(mw_work_t * work)
 {
-  DEBUG_PRINT("Doing work...");
+  mpz_t* nums = buffer_to_mpz(work->nums, 3);
+  mpz_t num, start, end; 
+  mpz_init_set(num, nums[0]);
+  mpz_init_set(start, nums[1]);
+  mpz_init_set(end, nums[2]);
+
   mpz_t mod, zero, i;
   mpz_init(mod);
   mpz_init_set_ui(zero,0);
 
-  unsigned int capacity = 0;
+  unsigned int capacity = 32;
   unsigned int n = 0;
 
   mpz_t* factors = malloc(capacity * sizeof(mpz_t));
   if (factors == NULL)
   {
     free(factors);
-    return NULL;
+    return;
   }
 
   // check if divisors from start to end are factors of num
   DEBUG_PRINT("It's not null");
-  mpz_init_set(i, work->start);
+  mpz_init_set(i, start);
   DEBUG_PRINT("Searching for factors");
-  for (; mpz_cmp(i,work->end); mpz_add_ui(i,i,1))
+  for (; mpz_cmp(i,end); mpz_add_ui(i,i,1))
   {
   	DEBUG_PRINT("computing mod");
-    mpz_mod(mod, work->num, i);
+    mpz_mod(mod, num, i);
   	DEBUG_PRINT("computed mod");
     if (mpz_cmp(mod, zero) == 0)
     {
@@ -221,9 +204,7 @@ mw_result_t * do_work(mw_work_t * work)
       // see if capacity needs to change
       if (n + 1 > capacity)
       {
-        if (capacity == 0)
-          capacity = 32;
-        else if (capacity <= (UINT_MAX/2))
+        if (capacity <= (UINT_MAX/2))
           capacity *= 2;
 
         mpz_t* temp = realloc(factors, capacity * sizeof(mpz_t));
@@ -235,20 +216,19 @@ mw_result_t * do_work(mw_work_t * work)
         factors = temp;
       }
       // add factor to list and update n
-      mpz_set(factors[n], i);
+      mpz_init_set(factors[n], i);
       n++;
     }    
   }
 
-  // minimize buffer to n
-  mpz_t* minimized = malloc(n*sizeof(mpz_t));
-  memcpy(minimized, factors, sizeof(mpz_t) * n);
-  free(factors);
-
-  // complete result
   mw_result_t * result = malloc(sizeof(mw_result_t));
-  result->f = minimized;
   result->n = n;
+
+  if(n != 0)
+  {
+	  factors = realloc(factors, sizeof(mpz_t) * n);
+	  mpz_to_buffer(result->nums, factors, n);
+  }
   return result;
 }
 
@@ -271,10 +251,12 @@ int main (int argc, char **argv)
   f.work_sz = sizeof(struct userdef_work_t);
   f.res_sz = sizeof(struct userdef_result_t);
 
+  double start, end;
+
   MW_Run (argc, argv, &f);
 
   MPI_Finalize ();
 
   return 0;
-
 }
+
