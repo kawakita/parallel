@@ -19,7 +19,7 @@ run_part1: $(PART1_SOURCES) $(PART1_EXEC)
 	$(RUN) $(HOSTS) -n $(n) $(PART1_EXEC) $(p)
 
 .c.o:
-	$(CC) $(CFLAGS) -c  $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -f *.o *~ *.*\# $(PART1_EXEC)
