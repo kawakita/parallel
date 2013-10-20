@@ -3,8 +3,6 @@
 #include "mw.h"
 #include "def_structs.h"
 
-// upon first 50%, computes mean and std dev
-
 // sleeps
 
 // as loop, does non-blocking recv for other workers
@@ -34,9 +32,8 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   MPI_Recv(&assignment_time, number_of_slaves, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
   
   // calc approximate time diff between sup and master
-  double mytime = MPI_Wtime();
   double master_time = assignment_time[number_of_slaves-1];
-  double mytime_off_by = mytime - master_time;
+  double mytime_off_by = MPI_Wtime() - master_time;
 
   DEBUG_PRINT("supervisor knows what the workers are doing and when they started");
 
@@ -51,16 +48,18 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
       int pid = slave+2;
       int msg = 0;
       MPI_IRecv(msg, 1, MPI_INT, pid, PING_TAG, MPI_COMM_WORLD);
-      if(msg == 1) 
+      if(msg == 1 && complete_time[slave] == NULL) 
       {
-        double time_received = MPI_Wtime();
         units_received++;
-        complete_time[slave] = 
+        //actual time it takes to complete, relative to when master sent
+        complete_time[slave] = MPI_Wtime() - mytime_off_by - assignment_time[slave];
       }
     }
     
   }
 
+  // upon first 50%, computes mean and std dev
+  
 
 }
 
