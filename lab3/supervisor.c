@@ -13,31 +13,39 @@
 
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
-
-	DEBUG_PRINT("supervisor starting");
+  
+  
+  DEBUG_PRINT("supervisor starting");
+  
+  int number_of_slaves;
+  MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
+  MPI_Status status;
+  number_of_slaves = number_of_slaves - 2;
         
-        MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
-        MPI_Status status;
-        
-        int * assignment_number = malloc(sizeof(int)*number_of_slaves);
-        // keep track of start times
-        double * assignment_time = malloc(sizeof(double)*number_of_slaves);
-        double * complete_time = malloc(sizeof(double)*number_of_slaves);
+  int * assignment_number = malloc(sizeof(int)*number_of_slaves);
+  // keep track of start times
+  double * assignment_time = malloc(sizeof(double)*number_of_slaves);
+  double * complete_time = malloc(sizeof(double)*number_of_slaves);
 
-        // supervisor does blocking receive to get list of workers and their start times
-       	MPI_Recv(&assignment_number, number_of_slaves, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-        MPI_Recv(&assignment_time, number_of_slaves, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-	
-        DEBUG_PRINT("supervisor knows what the workers are doing and when they started");
+  // supervisor does blocking receive to get list of workers and their start times
+  MPI_Recv(&assignment_number, number_of_slaves, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+  MPI_Recv(&assignment_time, number_of_slaves, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+  
+  DEBUG_PRINT("supervisor knows what the workers are doing and when they started");
 
-        int units_received = 0;
-        int slave;
-        
-        // does non-blocking recv for pings from workers for first 50%
-        while(units_received < number_of_slaves/2) 
-        {
-          for(
-        }
+  int units_received = 0;
+  int slave;
+  
+  // does non-blocking recv for pings from workers for first 50%
+  while(units_received < number_of_slaves/2) 
+  {
+    for(slave = 0; slave<number_of_slaves; slave++) 
+    {
+      int pid = slave+2;
+      
+    }
+    
+  }
 
 	
 	
