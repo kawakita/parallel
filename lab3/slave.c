@@ -44,8 +44,8 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
 
     // TODO: send ping after unit of work
 
-    DEBUG_PRINT("Sending result back!");
+    DEBUG_PRINT(("Sending result back!"));
     F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD);
-    DEBUG_PRINT("result sent");
+    DEBUG_PRINT(("result sent"));
   }
 }
