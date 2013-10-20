@@ -23,8 +23,8 @@ int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_C
 bool random_fail()
 {
   srand((unsigned)time(NULL));
-  float rand = ((float) rand())/RAND_MAX;
-  return rand > p;
+  float r = ((float) rand())/RAND_MAX;
+  return r > p;
 }
 
 void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
