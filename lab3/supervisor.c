@@ -19,7 +19,6 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
         MPI_Status status;
         
-        
         int * assignment_number = malloc(sizeof(int)*number_of_slaves);
         // keep track of start times
         double * assignment_time = malloc(sizeof(double)*number_of_slaves);

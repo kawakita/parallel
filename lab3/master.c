@@ -10,7 +10,7 @@ int get_total_units(mw_work_t ** work_list);
 void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
 
-	DEBUG_PRINT("master starting");
+	DEBUG_PRINT(("master starting"));
 
 	int number_of_slaves;
 
@@ -22,11 +22,11 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
         start = MPI_Wtime();
 
-	DEBUG_PRINT("creating work list...");
+	DEBUG_PRINT(("creating work list..."));
         start_create = MPI_Wtime();
 	work_list = f->create(argc, argv);
         end_create = MPI_Wtime();
-	DEBUG_PRINT("created work!");
+	DEBUG_PRINT(("created work!"));
 
 	int i=0, slave=1, num_work_units=0;
 
@@ -43,17 +43,17 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
 	for(slave=1; slave<number_of_slaves; ++slave)
 	{
-		DEBUG_PRINT("assigning work to slave");
+		DEBUG_PRINT(("assigning work to slave"));
 		mw_work_t * work_unit = work_list[i];
 		i++;
 		if(work_unit == NULL)
 		{
-			DEBUG_PRINT("reached the end of the work, breaking!");
+			DEBUG_PRINT(("reached the end of the work, breaking!"));
 			break;
 		}
 		send_to_slave(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
 		//MPI_Send(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
-		DEBUG_PRINT("work sent to slave");
+		DEBUG_PRINT(("work sent to slave"));
 	}
 
         // make array of work indices by pid
@@ -70,7 +70,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
           // probe for failures
 
           // make all recvs non-blocking
-		DEBUG_PRINT("Waiting to receive a result...");
+		DEBUG_PRINT(("Waiting to receive a result..."));
 		MPI_Status status;
 		MPI_Recv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		num_results_received++;
@@ -86,7 +86,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         // recvs non-blocking for remaining work units
 	while(num_results_received < num_work_units)
 	{
-		DEBUG_PRINT("Waiting to receive a result...");
+		DEBUG_PRINT(("Waiting to receive a result..."));
 		MPI_Status status;
 		MPI_Recv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		num_results_received++;
@@ -94,7 +94,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
 	for(slave=1; slave<number_of_slaves; ++slave)
 	{
-		DEBUG_PRINT("Murdering slave");
+		DEBUG_PRINT(("Murdering slave"));
 		kill_slave(slave);
 	}
         
@@ -115,7 +115,7 @@ void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave,
 {
   //gmp_printf("sending work %Zd to %d\n", work->start, slave);
 	MPI_Send(work, size, datatype, slave, tag, comm);
-	DEBUG_PRINT("Sent!");
+	DEBUG_PRINT(("Sent!"));
 }
 
 int get_total_units(mw_work_t ** work_list)
