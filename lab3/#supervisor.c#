@@ -55,7 +55,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
       {
         double time_received = MPI_Wtime();
         units_received++;
-        
+        complete
       }
     }
     

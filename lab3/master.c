@@ -41,7 +41,14 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   int num_results_received = 0;
 
-  for(slave=1; slave<number_of_slaves; ++slave)
+  // make array of work indices by pid
+  unsigned int assignment_number[number_of_slaves-2];
+
+  // create array of start times
+  double assignment_time[number_of_slaves-2];
+
+  // have supervisor so starting at 2
+  for(slave=2; slave<number_of_slaves; ++slave)
   {
     DEBUG_PRINT(("assigning work to slave"));
     mw_work_t * work_unit = work_list[i];
@@ -52,16 +59,15 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
       break;
     }
     send_to_slave(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
+    // save work index for pid
+    assignment_number[slave-2] = i;
+    assignment_time[slave-2] = MPI_Wtime();
     DEBUG_PRINT(("work sent to slave"));
   }
 
-  // make array of work indices by pid
-        
-  // create array of start times
-
-  // send that to supervisor
-
-
+  // send arrays to supervisor
+  send_to_slave(assignment_number, number_of_slaves-2, MPI_INT, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+  send_to_slave(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
 
   while(work_list[i] != NULL)
   {
