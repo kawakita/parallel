@@ -27,7 +27,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         
         MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
         
-        assignment_tracker ** 
+        double ** assignment_number = mal  
         // supervisor does blocking receive to get list of workers
        	MPI_Recv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
