@@ -11,8 +11,11 @@
 #define DEBUG_TEST(x, y)\
 	if(x != y) { fprintf(stderr, "TEST FAILURE: %s != %s. %s %d %s\n",  __FILE__, __LINE__, __func__); } else
 
+//To use this macro, you use two layers of parentheses, like this:
+// DEBUG_PRINT(("Hello %s!\n", "world"));
 #define DEBUG_PRINT(x) if(DEBUG) do { debug_printf x ; } while(0)
 
+/* Do not call this function directly, use the DEBUG_PRINT macro */
 void debug_printf(const char * fmt, ...)
 {
 	va_list args;
