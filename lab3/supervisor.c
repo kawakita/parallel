@@ -1,13 +1,26 @@
 #include <stdio.h>
 
 #include "mw.h"
-#include "def_structs_part2.h"
+#include "def_structs.h"
 
-void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
-void kill_slave(int slave);
-int get_total_units(mw_work_t ** work_list);
+// supervisor does blocking recv from master for info on workers
+// keep track of list of failures
+// keep track of start times
 
-void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
+// does non-blocking recv for pings from workers for first 50%
+
+// upon first 50%, computes mean and std dev
+
+// sleeps
+
+// as loop, does non-blocking recv for other workers
+
+// sends failures to master
+
+
+
+
+void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
 
 	DEBUG_PRINT("master starting");
@@ -56,34 +69,16 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 		DEBUG_PRINT("work sent to slave");
 	}
 
-        // make array of work indices by pid
-        
-        // create array of start times
-
-        // send that to supervisor
-
-
-
 	while(work_list[i] != NULL)
 	{
-          // receive failures from supervisor as non-blocking recv
-          // probe for failures
-
-          // make all recvs non-blocking
 		DEBUG_PRINT("Waiting to receive a result...");
 		MPI_Status status;
 		MPI_Recv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		num_results_received++;
-                // kill failures and MPI_Comm_Spawn
-                // send both new work units and failures
-                // recover work unit
-                // update pid and work index crosswalk
 		send_to_slave(work_list[i], f->work_sz, MPI_CHAR, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
-                // only increment if actually recv
 		i++;
 	}
 
-        // recvs non-blocking for remaining work units
 	while(num_results_received < num_work_units)
 	{
 		DEBUG_PRINT("Waiting to receive a result...");

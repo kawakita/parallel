@@ -56,34 +56,16 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 		DEBUG_PRINT("work sent to slave");
 	}
 
-        // make array of work indices by pid
-        
-        // create array of start times
-
-        // send that to supervisor
-
-
-
 	while(work_list[i] != NULL)
 	{
-          // receive failures from supervisor as non-blocking recv
-          // probe for failures
-
-          // make all recvs non-blocking
 		DEBUG_PRINT("Waiting to receive a result...");
 		MPI_Status status;
 		MPI_Recv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		num_results_received++;
-                // kill failures and MPI_Comm_Spawn
-                // send both new work units and failures
-                // recover work unit
-                // update pid and work index crosswalk
 		send_to_slave(work_list[i], f->work_sz, MPI_CHAR, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
-                // only increment if actually recv
 		i++;
 	}
 
-        // recvs non-blocking for remaining work units
 	while(num_results_received < num_work_units)
 	{
 		DEBUG_PRINT("Waiting to receive a result...");

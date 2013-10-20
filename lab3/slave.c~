@@ -1,6 +1,27 @@
 #include "mw.h"
 #include "mw_api.h"
 #include "def_structs_part2.h"
+#include <time.h>
+#include <stdlib.h>
+
+int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
+{
+  if (random_fail()) {      MPI_Finalize();
+    exit (0);
+    return 0;
+  } else {
+    return MPI_Send (buf, count, datatype, dest, tag, comm);
+  }
+}
+
+// TODO: implement random_fail()
+bool random_fail()
+{
+  time_t t;
+  srand(time(&t));
+  int rand = rand();
+  
+}
 
 void be_a_slave(struct mw_api_spec *f)
 {
@@ -18,8 +39,10 @@ void be_a_slave(struct mw_api_spec *f)
 
     computedResult = f->compute(&work);
 
-	DEBUG_PRINT("Sending result back!");
-    MPI_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD);
-	DEBUG_PRINT("result sent");
+    // TODO: send ping after unit of work
+
+    DEBUG_PRINT("Sending result back!");
+    F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD);
+    DEBUG_PRINT("result sent");
   }
 }
