@@ -66,12 +66,13 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   }
 
   // send arrays to supervisor
-  send_to_slave(assignment_number, number_of_slaves-2, MPI_INT, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-  send_to_slave(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+  MPI_Send(assignment_number, number_of_slaves-2, MPI_INT, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+  MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
 
   while(work_list[i] != NULL)
   {
     // receive failures from supervisor as non-blocking recv
+
     // probe for failures
 
     // make all recvs non-blocking
