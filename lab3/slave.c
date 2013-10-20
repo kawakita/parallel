@@ -1,6 +1,6 @@
 #include "mw.h"
 #include "mw_api.h"
-#include "def_structs_part2.h"
+#include "def_structs.h"
 #include <time.h>
 #include <stdlib.h>
 #include <limits.h>
