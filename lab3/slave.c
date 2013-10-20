@@ -9,7 +9,7 @@
 static float p = 0.8;
 
 // TODO: implement random_fail()
-bool random_fail()
+int random_fail()
 {
   srand((unsigned)time(NULL));
   float r = ((float) rand())/RAND_MAX;
