@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "mw.h"
-#include "def_structs_part2.h"
+#include "def_structs.h"
 
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
 void kill_slave(int slave);

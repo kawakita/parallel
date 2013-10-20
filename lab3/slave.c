@@ -1,6 +1,6 @@
 #include "mw.h"
 #include "mw_api.h"
-#include "def_structs_part2.h"
+#include "def_structs.h"
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
 {
