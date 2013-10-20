@@ -3,7 +3,7 @@
 #include "mw.h"
 #include "def_structs.h"
 
-// supervisor does blocking recv from master for info on workers
+
 // keep track of list of failures
 // keep track of start times
 
@@ -23,11 +23,20 @@
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
 
-	DEBUG_PRINT("master starting");
+	DEBUG_PRINT("supervisor starting");
+        
+        MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
+        MPI_Status status;
 
-	int number_of_slaves;
+        int * assignment_number = malloc(sizeof(int)*number_of_slaves);
+        double * assignment_time = malloc(sizeof(double)*number_of_slaves);
 
-	MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
+        // supervisor does blocking receive to get list of workers and their start times
+       	MPI_Recv(&assignment_number, number_of_slaves, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+	
+
+	
 	
 	mw_work_t ** work_list;
 

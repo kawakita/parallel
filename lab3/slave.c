@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
-static float p = 0.2;
+static float p = 0.8;
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
 {
