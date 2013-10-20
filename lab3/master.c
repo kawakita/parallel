@@ -69,16 +69,36 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   MPI_Send(assignment_number, number_of_slaves-2, MPI_INT, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
   MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
 
-  while(work_list[i] != NULL)
-  {
-    // receive failures from supervisor as non-blocking recv
+  // failures array
+  int* failures;
 
-    // probe for failures
+  MPI_Status status_fail, status_res;
+  MPI_Request request_fail, request_res;
+  int flag_fail = 0, flag_res = 0;
+
+  // receive failures from supervisor as non-blocking recv
+  MPI_Irecv(failures, number_of_slaves-2, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_fail);
+  // receive results from workers as non-blocking recv
+  MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
+
+  // probe for failures
+  MPI_Test(&request_fail,&flag_fail,&status_fail);
+  MPI_Test(&request_res,&flag_res,&status_res);
+
+  // send work if have failures or got results
+  while(flag_fail || flag_res)
+  {
+    while(work_list[i] != NULL)
+    {
+      
+    }  
+
+    MPI_Test(&request, &flag, &status);
+  }
 
     // make all recvs non-blocking
     DEBUG_PRINT(("Waiting to receive a result..."));
-    MPI_Status status;
-    MPI_Recv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
     num_results_received++;
     // kill failures and MPI_Comm_Spawn
     // send both new work units and failures
@@ -87,7 +107,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
     send_to_slave(work_list[i], f->work_sz, MPI_CHAR, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
     // only increment if actually recv
     i++;
-  }
+
 
   // recvs non-blocking for remaining work units
   while(num_results_received < num_work_units)

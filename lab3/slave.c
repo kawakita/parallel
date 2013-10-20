@@ -46,10 +46,12 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
   {
     // recv unit of work from master
     MPI_Recv(&work, f->work_sz, MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-	if(status.MPI_TAG == KILL_TAG)
-	{
-		return;
-	}
+    if(status.MPI_TAG == KILL_TAG)
+    {
+      return;
+    }
+    
+    // check for kill signal for non-blocking recv
 
     computedResult = f->compute(&work);
 
