@@ -34,6 +34,14 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
   int ping = 1;
   MPI_Status status;
 
+  // parse command line arg for success probability
+  if (argc == 3)
+  {
+    float temp = atof(argv[2]);
+    if (temp > .0 && temp < 1.)
+      p = temp;
+  }
+
   while(1)
   {
     // recv unit of work from master

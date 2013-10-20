@@ -34,6 +34,13 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
   int ping = 1;
   MPI_Status status;
 
+  if (argc == 3)
+  {
+    float temp = atof(argv[2]);
+    if (temp > .0 && temp < 1.)
+      p = temp;
+  }
+
   while(1)
   {
     // recv unit of work from master
@@ -44,8 +51,7 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
 	}
 
     computedResult = f->compute(&work);
-<<<<<<< HEAD
-    
+
     DEBUG_PRINT("Sending result back!");
     // send unit of work to master with probability p
     F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD);
@@ -53,13 +59,5 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
 
     // TODO: send ping after unit of work is possibly sent
     MPI_Send(&ping, 1, MPI_INT, 1, PING_TAG, MPI_COMM_WORLD);
-=======
-
-    // TODO: send ping after unit of work
-
-    DEBUG_PRINT(("Sending result back!"));
-    F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD);
-    DEBUG_PRINT(("result sent"));
->>>>>>> 119894ae38848aa831852e74aaca5998c5db0e77
   }
 }

@@ -37,7 +37,8 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         while(units_received < number_of_slaves/2) 
         {
           for(slave = 0; slave<number_of_slaves; slave++) 
-           
+          {
+          }
             
         }
 
