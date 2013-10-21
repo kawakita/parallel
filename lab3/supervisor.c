@@ -73,7 +73,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   double mean_time = tot_time/units_received;
   double standard_dev = stdDev(complete_time);
   
-  while(MPI_Wtime() <= start_to_wait + 3*standard_dev) 
+  while(units_received<number_of_slaves && MPI_Wtime() <= start_to_wait + 3*standard_dev) 
   {
     MPI_Test(&request, &flag, &status);
     if(flag)
@@ -86,7 +86,8 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   
   MPI_Send(completed, number_of_slaves, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
   
-  while(
+  MPI_IRecv(&msg, 1, MPI_INT, MPI_ANY_SOURCE, KILL_TAG, MPI_COMM_WORLD, &request);
+
   
 }
 

@@ -86,6 +86,9 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   MPI_Test(&request_fail, &flag_fail, &status_fail);
   MPI_Test(&request_res, &flag_res, &status_res);
 
+  // just loop through list of failures and that determines who succeeded and failed
+  // don't need separate recv's
+
   // send units of work while haven't received all results
   while(num_results_received < num_work_units)
   {
@@ -94,47 +97,49 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
     {
       if (flag_fail)
       {
-        
+        // resend each unit of work
+        for (i = 0; i < (number_of_slaves-2); i++)
+        {
+          if (failures[i])
+          {
+            mw_work_t* work_unit = work_list[assignment_number[i]];
+            int new_pid = create_new_slave(work_unit);
+            
+            // update work index for new_pid
+            assignment_number[new_pid] = assignment_number[i];
+            assignment_time[new_pid] = MPI_Wtime();
+
+            // send arrays to supervisor
+            MPI_Send(assignment_number, number_of_slaves-2, MPI_INT, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+            MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+          }
+        }
+
+        // continue to receive failures from supervisor as non-blocking recv
+        MPI_Irecv(failures, number_of_slaves-2, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_fail);
       }
 
       if (flag_res)
       {
-
         // update number of results received
         num_results_received++;
+
+        // send new unit of work
+        send_to_slave(work_list[i], f->work_sz, MPI_CHAR, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
+        // update number sent
+        i++;
+
+        // continue to receive failures from supervisor as non-blocking recv
+        MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
       }
-
-      while(work_list[i] != NULL)
-      {
-
-      }  
 
       // check again for failure or result
       MPI_Test(&request_fail, &flag_fail, &status_fail);
       MPI_Test(&request_res, &flag_res, &status_res);
     }
   }
-  // send kill signal to supervisor
 
-    // make all recvs non-blocking
-    DEBUG_PRINT(("Waiting to receive a result..."));
-
-    // kill failures and MPI_Comm_Spawn
-    // send both new work units and failures
-    // recover work unit
-    // update pid and work index crosswalk
-    send_to_slave(work_list[i], f->work_sz, MPI_CHAR, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
-    // only increment if actually recv
-    i++;
-
-
-  // recvs non-blocking for remaining work units
-    DEBUG_PRINT(("Waiting to receive a result..."));
-    MPI_Status status;
-    MPI_Recv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    num_results_received++;
-
-
+  // send kill signal to other processes, including supervisor
   for(slave=1; slave<number_of_slaves; ++slave)
   {
     DEBUG_PRINT(("Murdering slave"));
