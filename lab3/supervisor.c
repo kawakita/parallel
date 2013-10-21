@@ -12,7 +12,6 @@
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
   
-  
   DEBUG_PRINT("supervisor starting");
   
   int number_of_slaves;
@@ -80,10 +79,14 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     if(flag)
     {
       pid = status.MPI_SOURCE;
-      completed[slave] = 1;
+      completed[pid-2] = 1;
+      units_received++;
     }
   }
   
+  MPI_Send(completed, number_of_slaves, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
+  
+  while(
   
 }
 

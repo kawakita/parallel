@@ -82,24 +82,42 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
 
   // probe for failures
-  MPI_Test(&request_fail,&flag_fail,&status_fail);
-  MPI_Test(&request_res,&flag_res,&status_res);
+  MPI_Test(&request_fail, &flag_fail, &status_fail);
+  MPI_Test(&request_res, &flag_res, &status_res);
 
-  // send work if have failures or got results
-  while(flag_fail || flag_res)
+  // send units of work while haven't received all results
+  while(num_results_received < num_work_units)
   {
-    while(work_list[i] != NULL)
+    // send work if have failures or got results
+    while(flag_fail || flag_res)
     {
-      
-    }  
+      if (flag_fail)
+      {
+        
+      }
 
-    MPI_Test(&request, &flag, &status);
+      if (flag_res)
+      {
+
+        // update number of results received
+        num_results_received++;
+      }
+
+      while(work_list[i] != NULL)
+      {
+
+      }  
+
+      // check again for failure or result
+      MPI_Test(&request_fail, &flag_fail, &status_fail);
+      MPI_Test(&request_res, &flag_res, &status_res);
+    }
   }
+  // send kill signal to supervisor
 
     // make all recvs non-blocking
     DEBUG_PRINT(("Waiting to receive a result..."));
 
-    num_results_received++;
     // kill failures and MPI_Comm_Spawn
     // send both new work units and failures
     // recover work unit
@@ -110,13 +128,11 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
 
   // recvs non-blocking for remaining work units
-  while(num_results_received < num_work_units)
-  {
     DEBUG_PRINT(("Waiting to receive a result..."));
     MPI_Status status;
     MPI_Recv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     num_results_received++;
-  }
+
 
   for(slave=1; slave<number_of_slaves; ++slave)
   {
