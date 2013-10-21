@@ -6,6 +6,7 @@
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
 void kill_slave(int slave);
 int get_total_units(mw_work_t ** work_list);
+int create_new_slave(mw_work_t *); //return new PID
 
 void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
@@ -173,3 +174,6 @@ void kill_slave(int slave)
   MPI_Send(0, 0, MPI_CHAR, slave, KILL_TAG, MPI_COMM_WORLD);
 }
 
+int create_new_slave(mw_work_t * work)
+{
+}
