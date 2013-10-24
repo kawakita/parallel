@@ -2,6 +2,7 @@
 
 #include "mw.h"
 #include "def_structs.h"
+#include "linked_list.h"
 
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
 void kill_slave(int slave);
@@ -27,7 +28,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   start_create = MPI_Wtime();
   work_list = f->create(argc, argv);
   end_create = MPI_Wtime();
-  DEBUG_PRINT(("created work!"));
+  DEBUG_PRINT(("created work in %f seconds!", end_create - start_create));
 
   int i=0, slave=1, num_work_units=0;
 
@@ -38,6 +39,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   {
     fprintf(stderr, "ERROR: insufficient memory to allocate received_results\n");
     free(received_results);
+	exit(0);
   }
 
   int num_results_received = 0;
