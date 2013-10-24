@@ -44,52 +44,68 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   int num_results_received = 0;
 
-  // make array of work indices by pid
-  unsigned int assignment_number[number_of_slaves-2];
+  // make array keeping track of pointers for work that's active
+  unsigned int assignment_ptrs[number_of_slaves-2];
+
+  // make array of binary indicators for inactive workers
+  // initially all workers are active and 0
+  unsigned int inactive_workers[number_of_slaves-2];
 
   // create array of start times
   double assignment_time[number_of_slaves-2];
+
+  // current pointer
+  // TODO
+  LinkedList* ptr = work_list; 
 
   // have supervisor so starting at 2
   for(slave=2; slave<number_of_slaves; ++slave)
   {
     DEBUG_PRINT(("assigning work to slave"));
-    mw_work_t * work_unit = work_list[i];
-    i++;
+
+    // TODO
+    mw_work_t * work_unit = ptr->data;
+
     if(work_unit == NULL)
     {
       DEBUG_PRINT(("reached the end of the work, breaking!"));
       break;
     }
+
     send_to_slave(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
-    // save work index for pid
-    assignment_number[slave-2] = i;
+
+    // save ptr to assigned work
+    assignment_ptrs[slave-2] = ptr;
+    
+    // save start time
     assignment_time[slave-2] = MPI_Wtime();
+
+    // update ptr
+    // TODO
+    ptr++;
+
     DEBUG_PRINT(("work sent to slave"));
   }
 
-  // send arrays to supervisor
-  MPI_Send(assignment_number, number_of_slaves-2, MPI_INT, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+  // send time array to supervisor
   MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
 
-  // failures array
-  int* failures;
+  // failure id
+  int failure_id;
 
   MPI_Status status_fail, status_res;
   MPI_Request request_fail, request_res;
   int flag_fail = 0, flag_res = 0;
 
-  // receive failures from supervisor as non-blocking recv
-  MPI_Irecv(failures, number_of_slaves-2, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_fail);
-  // receive results from workers as non-blocking recv
+  // receive failure from supervisor as non-blocking recv
+  MPI_Irecv(&failure_id, 1, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_fail);
+
+  // receive result from workers as non-blocking recv
   MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
 
   // probe for failures
   MPI_Test(&request_fail, &flag_fail, &status_fail);
   MPI_Test(&request_res, &flag_res, &status_res);
-
-  // just loop through list of failures and that determines who succeeded and failed
-  // don't need separate recv's
 
   // send units of work while haven't received all results
   while(num_results_received < num_work_units)
@@ -99,26 +115,17 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
     {
       if (flag_fail)
       {
-        // resend each unit of work
-        for (i = 0; i < (number_of_slaves-2); i++)
-        {
-          if (failures[i])
-          {
-            mw_work_t* work_unit = work_list[assignment_number[i]];
-            int new_pid = create_new_slave(work_unit);
-            
-            // update work index for new_pid
-            assignment_number[new_pid] = assignment_number[i];
-            assignment_time[new_pid] = MPI_Wtime();
+          // change inactive workers array
+          inactive_workers[status_fail.MPI_SOURCE-2] = 1;
 
-            // send arrays to supervisor
-            MPI_Send(assignment_number, number_of_slaves-2, MPI_INT, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-            MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-          }
-        }
+          // get work_unit that needs to be reassigned
+          mw_work_t* work_unit = assignment_ptrs[failure_id];
 
-        // continue to receive failures from supervisor as non-blocking recv
-        MPI_Irecv(failures, number_of_slaves-2, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_fail);
+          // move failed unit of work to end of work list
+          // TODO
+
+          // continue to receive failures from supervisor as non-blocking recv
+          MPI_Irecv(&failure_id, 1, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_fail);
       }
 
       if (flag_res)
@@ -126,13 +133,23 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         // update number of results received
         num_results_received++;
 
-        // send new unit of work
-        send_to_slave(work_list[i], f->work_sz, MPI_CHAR, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
-        // update number sent
-        i++;
+        // get work_unit
+        // TODO
+        mw_work_t* work_unit = ptr->data;
 
-        // continue to receive failures from supervisor as non-blocking recv
-        MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
+        // send new unit of work
+        send_to_slave(work_unit, f->work_sz, MPI_CHAR, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
+
+        // update pointer
+        ptr++;
+
+        // update work index for new_pid
+        // TODO: update ptr stored in array index
+        assignment_ptr[status.MPI_SOURCE-2] = ptr;
+        assignment_time[status.MPI_SOURCE-2] = MPI_Wtime();
+
+        // send updated array of times to supervisor
+        MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
       }
 
       // check again for failure or result
