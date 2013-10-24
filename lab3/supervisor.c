@@ -22,8 +22,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   // determine how long each worker took
   double * complete_time = malloc(sizeof(double)*number_of_slaves);
-  // booleans for completion
-  int * completed = calloc(sizeof(int), number_of_slaves);
+  // booleans for failure
   int * failed_worker = calloc(sizeof(int), number_of_slaves);
 
   // supervisor does blocking receive to get list of workers and their start times
@@ -68,7 +67,6 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         //we have a good worker!
         if(assignment_time1[i] != assignment_time2[i])
         {
-          completed[i] = 1;
           units_received++;
           complete_time[i] = assignment_time2[i] - assignment_time1[i];
           tot_time += complete_time[i];
@@ -86,13 +84,13 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           }
           
         }
-        //we have a bad worker :(
+        //if we have enough data, we can tell if we have a bad worker :(
         else if(threshold>0 && MPI_Wtime() - mytime_off_by - assignment_time1[i] > threshold)
         {
           MPI_Send(i, 1, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
           failed_worker[i] = 1;
         }
-      
+        //else assume the best
       }
       
     }
