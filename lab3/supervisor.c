@@ -71,16 +71,12 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           units_received++;
           tot_time += complete_time[i];
           mean = tot_time/units_received;
+          sq_err += pow(complete_time[i] - mean, 2);
+          stddev = sqrt(sq_err/units_received);
 
-          //we have enough data to update mean and stddev
+          //we have enough data to update threshold
           if(units_received >= number_of_slaves/2)
           {
-            
-            // only calc stddev once
-            if(stddev==0)
-            {
-              stddev = standardDeviation(complete_time, mean, number_of_slaves);
-            }
             threshold = mean + 2*stddev;
           }
           
@@ -102,12 +98,4 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   
 }
 
-double standardDeviation(double nums[], double mean, int n)
-{
-  double sum = 0;
-  int i;
 
-  for(i = 0; i < maxNums; i++) sum += pow(nums[i]-mean, 2);
-
-  return sqrt(sum/maxNums);
-}

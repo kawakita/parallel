@@ -44,7 +44,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   int num_results_received = 0;
 
   // make array keeping track of pointers for work that's active
-  unsigned int assignment_ptrs[number_of_slaves-2];
+  LinkedList assignment_ptrs[number_of_slaves-2];
 
   // make array of binary indicators for inactive workers
   // initially all workers are active and 0
@@ -115,7 +115,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
           inactive_workers[status_fail.MPI_SOURCE-2] = 1;
 
           // get work_unit that needs to be reassigned
-          mw_work_t* work_unit = assignment_ptrs[failure_id];
+          LinkedList work_unit = assignment_ptrs[failure_id];
 
           // move failed unit of work to end of work list
           // TODO
