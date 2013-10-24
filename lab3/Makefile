@@ -2,10 +2,11 @@ CC=mpicc
 CFLAGS=-Wall
 RUN=mpirun
 HOSTS=--hostfile ../hosts
-n=4
+p=8
 PART1_SOURCE=master.c\
              mw_api.c\
-             slave.c
+             slave.c\
+			 linked_list.c
 PART1_OBJECTS=$(PART1_SOURCE:.c=.o)
 PART1_EXEC=part1
 

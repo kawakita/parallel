@@ -2,11 +2,11 @@
 
 #include "mw.h"
 #include "def_structs.h"
+#include "linked_list.h"
 
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
 void kill_slave(int slave);
 int get_total_units(mw_work_t ** work_list);
-int create_new_slave(mw_work_t *); //return new PID
 
 void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
@@ -17,7 +17,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
   
-  mw_work_t ** work_list;
+  LinkedList * work_list;
 
   double start, end, start_create, end_create, start_results, end_results;
 
@@ -25,19 +25,20 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   DEBUG_PRINT(("creating work list..."));
   start_create = MPI_Wtime();
-  work_list = f->create(argc, argv);
+  work_list = listFromArray(f->create(argc, argv))
   end_create = MPI_Wtime();
-  DEBUG_PRINT(("created work!"));
+  DEBUG_PRINT(("created work in %f seconds!", end_create - start_create));
 
   int i=0, slave=1, num_work_units=0;
 
-  num_work_units = get_total_units(work_list);
+  num_work_units = list_length(work_list);
 
   mw_result_t * received_results =  malloc(f->res_sz * num_work_units);
   if (received_results == NULL)
   {
     fprintf(stderr, "ERROR: insufficient memory to allocate received_results\n");
     free(received_results);
+	exit(0);
   }
 
   int num_results_received = 0;
@@ -53,34 +54,31 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   double assignment_time[number_of_slaves-2];
 
   // current pointer
-  // TODO
-  LinkedList* ptr = work_list; 
+  LinkedList* next_work_node = work_list; 
 
   // have supervisor so starting at 2
   for(slave=2; slave<number_of_slaves; ++slave)
   {
     DEBUG_PRINT(("assigning work to slave"));
 
-    // TODO
-    mw_work_t * work_unit = ptr->data;
-
-    if(work_unit == NULL)
+    if(next_work_node == NULL)
     {
       DEBUG_PRINT(("reached the end of the work, breaking!"));
       break;
     }
 
+    mw_work_t * work_unit = next_work_node->data;
+
     send_to_slave(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
 
-    // save ptr to assigned work
-    assignment_ptrs[slave-2] = ptr;
+    // save next_work_node to assigned work
+    assignment_ptrs[slave-2] = next_work_node;
     
     // save start time
     assignment_time[slave-2] = MPI_Wtime();
 
-    // update ptr
-    // TODO
-    ptr++;
+    // update next_work_node
+    next_work_node=next_work_node->next;
 
     DEBUG_PRINT(("work sent to slave"));
   }
@@ -133,17 +131,16 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
         // get work_unit
         // TODO
-        mw_work_t* work_unit = ptr->data;
+        mw_work_t* work_unit = next_work_node->data;
 
         // send new unit of work
         send_to_slave(work_unit, f->work_sz, MPI_CHAR, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
 
         // update pointer
-        ptr++;
+        next_work_node++;
 
         // update work index for new_pid
-        // TODO: update ptr stored in array index
-        assignment_ptr[status.MPI_SOURCE-2] = ptr;
+        assignment_ptr[status.MPI_SOURCE-2] = next_work_node;
         assignment_time[status.MPI_SOURCE-2] = MPI_Wtime();
 
         // send updated array of times to supervisor
