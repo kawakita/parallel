@@ -60,7 +60,8 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     if(!flag2)
     {
       //continue;
-    } else 
+    } 
+    else 
     {
       MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
     }
@@ -74,7 +75,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
       if(failed_worker[i] == 0)
       {
         //we have a good worker!
-        if(assignment_time1[i] != assignment_time2[i])
+        if(assignment_time1[i] != assignment_time2[i] && flag2)
         {
           DEBUG_PRINT(("supervisor is impressed by his good worker"));
           complete_time[i] = assignment_time2[i] - assignment_time1[i];
@@ -97,10 +98,9 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           MPI_Send(&i, 1, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
           failed_worker[i] = 1;
         }
-        //else assume the best and update the array
-        assignment_time1 = assignment_time2;
+        
       }
-      
+      assignment_time1 = assignment_time2;
       //DEBUG_PRINT(("supervisor got through an iteration of his while loop"));
       
     }
