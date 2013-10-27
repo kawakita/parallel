@@ -48,7 +48,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   // make array of binary indicators for inactive workers
   // initially all workers are active and 0
-  unsigned int inactive_workers[number_of_slaves-2];
+  //unsigned int inactive_workers[number_of_slaves-2];
 
   // create array of start times
   double assignment_time[number_of_slaves-2];
@@ -112,7 +112,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
       if (flag_fail)
       {
           // change inactive workers array
-          inactive_workers[status_fail.MPI_SOURCE-2] = 1;
+          //inactive_workers[status_fail.MPI_SOURCE-2] = 1;
 
           // get work_unit that needs to be reassigned
           LinkedList * work_unit = assignment_ptrs[failure_id];
@@ -133,7 +133,6 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         num_results_received++;
 
         // get work_unit
-        // TODO
         mw_work_t* work_unit = next_work_node->data;
 
         // send new unit of work
@@ -149,8 +148,8 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         // send updated array of times to supervisor
         MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
 
-          // continue to receive results from workers as non-blocking recv
-        MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
+        // continue to receive results from workers as non-blocking recv
+        MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, WORK_TAG, MPI_COMM_WORLD, &request_res);
 
         // check for flag_res again
         MPI_Test(&request_res, &flag_res, &status_res);

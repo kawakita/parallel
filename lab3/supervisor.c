@@ -58,6 +58,8 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     {
       //continue;
     }
+    
+    DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
 
     //check for differences in working slaves
     for(i=0; i<number_of_slaves; i++) 
@@ -90,6 +92,8 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         //else assume the best and update the array
         assignment_time1 = assignment_time2;
       }
+      
+      DEBUG_PRINT(("supervisor got through an iteration of his while loop"));
       
     }
     
