@@ -51,7 +51,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     if(flag1)
     {
       DEBUG_PRINT(("SUPERVISOR SUICIDE!"));
-      exit(0);
+      return;
     }
     
     //get a new start time array from master
