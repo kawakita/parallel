@@ -15,7 +15,6 @@
 // DEBUG_PRINT(("Hello %s!\n", "world"));
 #define DEBUG_PRINT(x) if(DEBUG) do { debug_printf x ; } while(0)
 
-/* Do not call this function directly, use the DEBUG_PRINT macro */
 static void debug_printf(const char * fmt, ...)
 {
 	va_list args;
