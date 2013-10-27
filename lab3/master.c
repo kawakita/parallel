@@ -38,7 +38,6 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   if (received_results == NULL)
   {
     fprintf(stderr, "ERROR: insufficient memory to allocate received_results\n");
-    free(received_results);
 	exit(0);
   }
 
@@ -127,8 +126,11 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         // get work_unit that needs to be reassigned
         LinkedList * work_unit = assignment_ptrs[failure_id];
 
-        //check if work_unit is end of work list
-        if(next_work_node == NULL && work_unit->next == NULL)
+        if(work_unit == NULL)
+        {
+            DEBUG_PRINT(("failed work unit is NULL?"));
+        }
+        else if(next_work_node == NULL && work_unit != NULL && work_unit->next == NULL)
         {
             next_work_node = work_unit;
         }
@@ -157,26 +159,30 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
       }
       if(next_work_node != NULL)
       {
-              // get work_unit
-              mw_work_t* work_unit = next_work_node->data;
+          // get work_unit
+          mw_work_t* work_unit = next_work_node->data;
 
-              // send new unit of work
-              send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
+          // send new unit of work
+          send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
 
-              // update pointer
-              if(next_work_node->next == NULL)
-              {
-                  list_end = next_work_node;
-              }
-              next_work_node = next_work_node->next;
+          // update pointer
+          if(next_work_node->next == NULL)
+          {
+              list_end = next_work_node;
+          }
 
+          if(next_work_node != NULL)
+          {
               // update work index for new_pid
               assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
+              assert(assignment_ptrs[status_res.MPI_SOURCE-2] != NULL);
               assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
 
               // send updated array of times to supervisor
               MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
               DEBUG_PRINT(("SENT TIME TO SUP"));
+          }
+          next_work_node = next_work_node->next;
       }
 
       // continue to receive results from workers as non-blocking recv
