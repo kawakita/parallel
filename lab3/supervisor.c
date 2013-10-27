@@ -80,6 +80,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           units_received++;
           tot_time += complete_time[i];
           mean = tot_time/units_received;
+		  DEBUG_PRINT(("Computing mean = %f/%d = %f", tot_time, units_received, mean));
           sq_err += pow(complete_time[i] - mean, 2);
           stddev = sqrt(sq_err/units_received);
           DEBUG_PRINT(("supervisor made a note of his good worker. %e is the mean", mean ));
