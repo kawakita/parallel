@@ -27,7 +27,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   int * failed_worker = calloc(sizeof(int), number_of_slaves);
 
   // supervisor does blocking receive to get list of workers and their start times
-  MPI_Recv(&assignment_time1, number_of_slaves, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+  MPI_Recv(&assignment_time1, number_of_slaves, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
   
   // calc approximate time diff between sup and master
   double master_time = assignment_time1[number_of_slaves-1];

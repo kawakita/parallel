@@ -25,11 +25,11 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   DEBUG_PRINT(("creating work list..."));
   start_create = MPI_Wtime();
-  work_list = listFromArray(f->create(argc, argv))
+  work_list = listFromArray(f->create(argc, argv));
   end_create = MPI_Wtime();
   DEBUG_PRINT(("created work in %f seconds!", end_create - start_create));
 
-  int i=0, slave=1, num_work_units=0;
+  int slave=1, num_work_units=0;
 
   num_work_units = list_length(work_list);
 
@@ -44,7 +44,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   int num_results_received = 0;
 
   // make array keeping track of pointers for work that's active
-  LinkedList assignment_ptrs[number_of_slaves-2];
+  LinkedList* assignment_ptrs[number_of_slaves-2];
 
   // make array of binary indicators for inactive workers
   // initially all workers are active and 0
@@ -115,10 +115,10 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
           inactive_workers[status_fail.MPI_SOURCE-2] = 1;
 
           // get work_unit that needs to be reassigned
-          LinkedList work_unit = assignment_ptrs[failure_id];
+          LinkedList * work_unit = assignment_ptrs[failure_id];
 
           // move failed unit of work to end of work list
-          // TODO
+          move_node_to_end(work_unit);
 
           // continue to receive failures from supervisor as non-blocking recv
           MPI_Irecv(&failure_id, 1, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_fail);
@@ -134,14 +134,14 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         mw_work_t* work_unit = next_work_node->data;
 
         // send new unit of work
-        send_to_slave(work_unit, f->work_sz, MPI_CHAR, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
+        send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
 
         // update pointer
         next_work_node++;
 
         // update work index for new_pid
-        assignment_ptr[status.MPI_SOURCE-2] = next_work_node;
-        assignment_time[status.MPI_SOURCE-2] = MPI_Wtime();
+        assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
+        assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
 
         // send updated array of times to supervisor
         MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
@@ -191,8 +191,4 @@ int get_total_units(mw_work_t ** work_list)
 void kill_slave(int slave)
 {
   MPI_Send(0, 0, MPI_CHAR, slave, KILL_TAG, MPI_COMM_WORLD);
-}
-
-int create_new_slave(mw_work_t * work)
-{
 }

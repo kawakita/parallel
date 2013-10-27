@@ -3,11 +3,12 @@
 #include "mw_api.h"
 #include "debug.h"
 
-struct LinkedList
+typedef struct LinkedList
 {
-	LinkedList * next;
+	struct LinkedList * next;
 	mw_work_t * data;
 }
+LinkedList;
 
 /* array must be null terminated */
 LinkedList * listFromArray(mw_work_t ** array);
