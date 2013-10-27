@@ -141,7 +141,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
 
         // update pointer
-        next_work_node++;
+        next_work_node = next_work_node->next;
 
         // update work index for new_pid
         assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
