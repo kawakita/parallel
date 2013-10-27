@@ -40,11 +40,13 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   
   double tot_time=0, sq_err=0, mean=0, stddev=0, threshold=0;
   
+  MPI_Irecv(&kill_msg, 1, MPI_INT, 0, KILL_TAG, MPI_COMM_WORLD, &request1);
+  MPI_Irecv(assignment_time2, 1, MPI_INT, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
+
   //waiting for updates on start times from master
   while(1) 
   {
-    //kill myself if the master says so
-    MPI_Irecv(&kill_msg, 1, MPI_INT, 0, KILL_TAG, MPI_COMM_WORLD, &request1);
+    //kill myself if the master says so  
     MPI_Test(&request1, &flag1, &status1);
     if(flag1)
     {
@@ -53,11 +55,13 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     }
     
     //get a new start time array from master
-    MPI_Irecv(assignment_time2, 1, MPI_INT, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
     MPI_Test(&request2, &flag2, &status2);
     if(!flag2)
     {
       //continue;
+    } else 
+    {
+      MPI_Irecv(assignment_time2, 1, MPI_INT, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
     }
     
     //DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
