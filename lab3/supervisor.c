@@ -65,6 +65,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     //check for differences in working slaves
     for(i=0; i<number_of_slaves; i++) 
     {
+      DEBUG_PRINT(("Slave %d started at time %f.", i, assignment_time1[i]));
       if(failed_worker[i] == 0)
       {
         //we have a good worker!
@@ -77,7 +78,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           mean = tot_time/units_received;
           sq_err += pow(complete_time[i] - mean, 2);
           stddev = sqrt(sq_err/units_received);
-          DEBUG_PRINT(("supervisor made a note of his good worker. %f is the stddev", stddev ));
+          DEBUG_PRINT(("supervisor made a note of his good worker. %e is the mean", mean ));
           //we have enough data to update threshold
           if(units_received >= number_of_slaves/2)
           {

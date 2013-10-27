@@ -129,10 +129,10 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
     if (flag_res)
     {
-      DEBUG_PRINT(("Received result"));
-
       // update number of results received
       num_results_received++;
+
+      DEBUG_PRINT(("Received result %d", num_results_received));
 
               if(next_work_node != NULL)
               {
