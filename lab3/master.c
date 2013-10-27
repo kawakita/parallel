@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 
 #include "mw.h"
 #include "def_structs.h"
@@ -54,7 +55,9 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   double assignment_time[number_of_slaves-2];
 
   // current pointer
-  LinkedList* next_work_node = work_list; 
+  LinkedList
+    * next_work_node = work_list,
+    * list_end = NULL;
 
   // have supervisor so starting at 2
   for(slave=2; slave<number_of_slaves; ++slave)
@@ -73,11 +76,16 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
     // save next_work_node to assigned work
     assignment_ptrs[slave-2] = next_work_node;
+    assert(assignment_ptrs[slave-2] != NULL);
     
     // save start time
     assignment_time[slave-2] = MPI_Wtime();
 
     // update next_work_node
+    if(next_work_node->next == NULL)
+    {
+        list_end = next_work_node;
+    }
     next_work_node=next_work_node->next;
 
     DEBUG_PRINT(("work sent to slave"));
@@ -119,8 +127,17 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         // get work_unit that needs to be reassigned
         LinkedList * work_unit = assignment_ptrs[failure_id];
 
-        // move failed unit of work to end of work list
-        move_node_to_end(work_unit);
+        //check if work_unit is end of work list
+        if(next_work_node == NULL && work_unit->next == NULL)
+        {
+            next_work_node = work_unit;
+        }
+        else
+        {
+            move_node_to_end(work_unit);
+        }
+
+        flag_fail = 0;
 
         // continue to receive failures from supervisor as non-blocking recv
         MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
@@ -133,25 +150,34 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
       //DEBUG_PRINT(("Received result %d", num_results_received));
 
-              if(next_work_node != NULL)
+      if(next_work_node == NULL && list_end != NULL && list_end->next != NULL)
+      {
+          next_work_node = list_end->next;
+          list_end == NULL;
+      }
+      if(next_work_node != NULL)
+      {
+              // get work_unit
+              mw_work_t* work_unit = next_work_node->data;
+
+              // send new unit of work
+              send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
+
+              // update pointer
+              if(next_work_node->next == NULL)
               {
-                      // get work_unit
-                      mw_work_t* work_unit = next_work_node->data;
-
-                      // send new unit of work
-                      send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
-
-                      // update pointer
-                      next_work_node = next_work_node->next;
-
-                      // update work index for new_pid
-                      assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
-                      assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
-
-                      // send updated array of times to supervisor
-                      MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-                      DEBUG_PRINT(("SENT TIME TO SUP"));
+                  list_end = next_work_node;
               }
+              next_work_node = next_work_node->next;
+
+              // update work index for new_pid
+              assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
+              assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
+
+              // send updated array of times to supervisor
+              MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+              DEBUG_PRINT(("SENT TIME TO SUP"));
+      }
 
       // continue to receive results from workers as non-blocking recv
       MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, WORK_TAG, MPI_COMM_WORLD, &request_res);      

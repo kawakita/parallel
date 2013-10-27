@@ -4,8 +4,7 @@ INCLUDE=-I/usr/include/glib-2.0/ -I/usr/lib/x86_64-linux-gnu/glib-2.0/include/
 #LIBS=-lglib-2.0
 RUN=mpirun
 HOSTS=--hostfile ../hosts
-p=8
-n=8
+n=10
 PART1_SOURCE=master.c\
              mw_api.c\
              slave.c\
@@ -23,7 +22,7 @@ $(PART1_EXEC): $(PART1_OBJECTS)
 	$(CC) $(PART1_OBJECTS) -o $(PART1_EXEC)
 
 run_part1: $(PART1_SOURCES) $(PART1_EXEC)
-	$(RUN) $(HOSTS) -n $(n) $(PART1_EXEC) $(p)
+	$(RUN) $(HOSTS) -n $(n) $(PART1_EXEC)
 
 .c.o:
 	$(CC) $(INCLUDE) -DDEBUG=$(DEBUG) $(CFLAGS) -c $< -o $@

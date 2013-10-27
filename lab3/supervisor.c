@@ -71,11 +71,17 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     //DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
 
     //check for differences in working slaves
+    int sent_fail = 0;
     for(i=0; i<number_of_slaves; i++) 
     {
       if(received_update)
       {
-        DEBUG_PRINT(("for worker %d, assignment_time1 == assignment_time2 is %s", i, assignment_time1[i] == assignment_time2[i] ? "TRUE" : "FALSE"));
+          if(sent_fail == 1)
+          {
+              DEBUG_PRINT(("RECEIVED AN UPDATE AFTER SENDING A FAILURE!!!!!!!!"));
+          }
+
+        //DEBUG_PRINT(("for worker %d, assignment_time1 == assignment_time2 is %s", i, assignment_time1[i] == assignment_time2[i] ? "TRUE" : "FALSE"));
       }
       if(failed_worker[i] == 0)
       {
@@ -93,7 +99,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           //we have enough data to update threshold
           if(units_received >= number_of_slaves/2)
           {
-            threshold = mean + 2*stddev;
+            threshold = mean + 2*stddev + 1.0;
             DEBUG_PRINT(("the threshold is %f", threshold));
           }
           assignment_time1[i] = assignment_time2[i];
@@ -103,8 +109,10 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         else if(threshold>0 && assignment_time1[i]==assignment_time2[i] && MPI_Wtime() - mytime_off_by - assignment_time1[i] > threshold)
         {
           DEBUG_PRINT(("methinks someone is slacking %d", i));
+          DEBUG_PRINT(("Threshold is %f, time delta is %f - %f - %f = %f", threshold, MPI_Wtime(), mytime_off_by, assignment_time1[i], MPI_Wtime() - mytime_off_by - assignment_time1[i]));
           MPI_Send(&i, 1, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
           failed_worker[i] = 1;
+          sent_fail = 1;
         }
       }
     }
@@ -112,7 +120,6 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     {
       MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
     } 
-
   }
 }
 

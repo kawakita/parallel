@@ -7,7 +7,7 @@
 
 mw_work_t ** create_work(int argc, char ** arv)
 {
-  const int total_work = 10;
+  const int total_work = 25;
   mw_work_t ** work_list = calloc(total_work, sizeof(mw_work_t*) + 1);
   int i=0;
   for(i=0; i<total_work; ++i)
