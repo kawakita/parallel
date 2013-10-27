@@ -99,13 +99,17 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   // receive result from workers as non-blocking recv
   MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
 
-  // probe for failures
-  MPI_Test(&request_fail, &flag_fail, &status_fail);
-  MPI_Test(&request_res, &flag_res, &status_res);
+  DEBUG_PRINT(("NUM WORK UNITS %d", num_work_units));
 
   // send units of work while haven't received all results
   while(num_results_received < num_work_units)
   {
+    // check for flag_fail again
+    MPI_Test(&request_fail, &flag_fail, &status_fail);
+
+    // check for flag_res again
+    MPI_Test(&request_res, &flag_res, &status_res);
+    
     // send work if have failures or got results
     if (flag_fail)
     {
@@ -122,9 +126,6 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
         // continue to receive failures from supervisor as non-blocking recv
         MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
-
-      // check for flag_fail again
-        MPI_Test(&request_fail, &flag_fail, &status_fail);
     }
 
     if (flag_res)
@@ -147,19 +148,21 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
                       // update work index for new_pid
                       assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
+                      DEBUG_PRINT(("index: %d", status_res.MPI_SOURCE-2));
+                      DEBUG_PRINT(("time before: %f", assignment_time[status_res.MPI_SOURCE-2]));
+                      system("sleep 1");
                       assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
 
-                      DEBUG_PRINT(("sent new unit of work"));
+                      DEBUG_PRINT(("time after: %f", assignment_time[status_res.MPI_SOURCE-2]));
+                      DEBUG_PRINT(("sent new unit of work, received %d", num_results_received));
 
                       // send updated array of times to supervisor
+                      DEBUG_PRINT(("number_of_slaves %d", number_of_slaves-2));
                       MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
               }
 
       // continue to receive results from workers as non-blocking recv
-      MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, WORK_TAG, MPI_COMM_WORLD, &request_res);
-
-      // check for flag_res again
-      MPI_Test(&request_res, &flag_res, &status_res);
+      MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, WORK_TAG, MPI_COMM_WORLD, &request_res);      
     }
   }
 
@@ -184,8 +187,8 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm)
 {
+  DEBUG_PRINT(("Sent! %d", slave));
   MPI_Send(work, size, datatype, slave, tag, comm);
-  DEBUG_PRINT(("Sent!"));
 }
 
 int get_total_units(mw_work_t ** work_list)

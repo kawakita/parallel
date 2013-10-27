@@ -11,9 +11,10 @@ static float p = 1.0;
 // implement random_fail()
 int random_fail()
 {
-  srand((unsigned)time(NULL));
+  /*srand((unsigned)time(NULL));
   float r = ((float) rand())/RAND_MAX;
-  return r > p;
+  return r > p;*/
+  return 0;
 }
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
@@ -50,17 +51,18 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
     {
       return;
     }
-    
-    // check for kill signal for non-blocking recv
 
+    system("sleep 0.5");
+
+    // check for kill signal for non-blocking recv
     computedResult = f->compute(&work);
 
-    DEBUG_PRINT(("Sending result back!"));
+    DEBUG_PRINT(("Result computed!"));
     // send unit of work to master with probability p
     F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD);
     DEBUG_PRINT(("result sent"));
 
-    // TODO: send ping after unit of work is possibly sent
+    // send ping after unit of work is possibly sent
     MPI_Send(&ping, 1, MPI_INT, 1, PING_TAG, MPI_COMM_WORLD);
   }
 }
