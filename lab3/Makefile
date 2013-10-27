@@ -1,5 +1,7 @@
 CC=mpicc
 CFLAGS=-Wall -g
+INCLUDE=-I/usr/include/glib-2.0/ -I/usr/lib/x86_64-linux-gnu/glib-2.0/include/
+LIBS=-lglib-2.0
 RUN=mpirun
 HOSTS=--hostfile ../hosts
 p=8
@@ -18,13 +20,13 @@ all:
 	echo specify a target
 
 $(PART1_EXEC): $(PART1_OBJECTS)
-	$(CC) $(PART1_OBJECTS) -o $(PART1_EXEC)
+	$(CC) $(PART1_OBJECTS) $(LIBS) -o $(PART1_EXEC)
 
 run_part1: $(PART1_SOURCES) $(PART1_EXEC)
 	$(RUN) $(HOSTS) -n $(n) $(PART1_EXEC) $(p)
 
 .c.o:
-	$(CC) -DDEBUG=$(DEBUG) $(CFLAGS) -c $< -o $@
+	$(CC) $(INCLUDE) -DDEBUG=$(DEBUG) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -f *.o *~ *.*\# $(PART1_EXEC) core*

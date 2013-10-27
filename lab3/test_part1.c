@@ -1,5 +1,6 @@
 #include <math.h>
 #include <gmp.h>
+#include <glib.h>
 #include "mw_api.h"
 #include "def_structs.h"
 #include "debug.h"
@@ -25,9 +26,13 @@ int process_results(int sz, mw_result_t * res)
   {
     DEBUG_PRINT(("%f", res[i].k));
     if(res[i].k == M_PI)
+	{
       DEBUG_PRINT(("Found some pi!"));
+	}
     else
+	{
       DEBUG_PRINT(("No pi here :("));
+	}
   }
   return 0;
 }
@@ -46,6 +51,8 @@ int main (int argc, char **argv)
   struct mw_api_spec f;
 
   MPI_Init (&argc, &argv);
+
+  GHashTable * table = g_hash_table_new(g_str_hash, g_str_equal);
 
   f.create = create_work;
   f.result = process_results;
