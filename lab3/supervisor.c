@@ -37,7 +37,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   int units_received = 0;
   int i;
-  int kill_msg, flag1, flag2;
+  int kill_msg, flag1, received_update;
   
   double tot_time=0, sq_err=0, mean=0, stddev=0, threshold=0;
   
@@ -57,8 +57,8 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     }
     
     //get a new start time array from master
-    MPI_Test(&request2, &flag2, &status2);
-    if(!flag2)
+    MPI_Test(&request2, &received_update, &status2);
+    if(!received_update)
     {
       //continue;
     } 
@@ -72,15 +72,14 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     //check for differences in working slaves
     for(i=0; i<number_of_slaves; i++) 
     {
-      if(flag2)
+      if(received_update)
       {
-        DEBUG_PRINT(("Last time, I thought slave %d started at time %f.", i, assignment_time1[i]));
-        DEBUG_PRINT(("But now, master is saying slave %d started at time %f.", i, assignment_time2[i]));
+        DEBUG_PRINT(("for worker %d, assignment_time1 == assignment_time2 is %s", i, assignment_time1[i] == assignment_time2[i] ? "TRUE" : "FALSE"));
       }
       if(failed_worker[i] == 0)
       {
         //we have a good worker!
-        if(assignment_time1[i] != assignment_time2[i] && flag2)
+        if(assignment_time1[i] != assignment_time2[i] && received_update)
         {
           DEBUG_PRINT(("supervisor is impressed by his good worker"));
           complete_time[i] = assignment_time2[i] - assignment_time1[i];
@@ -106,19 +105,15 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         
       }
 
-      if(flag2) 
+      if(received_update) 
       {
         assignment_time1 = assignment_time2;
         MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
         
       }
       //DEBUG_PRINT(("supervisor got through an iteration of his while loop"));
-      
     }
-    
   }
-  
-  
 }
 
 
