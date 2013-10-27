@@ -119,6 +119,8 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
           // move failed unit of work to end of work list
           move_node_to_end(work_unit);
+          
+          DEBUG_PRINT(("received failure"));
 
           // continue to receive failures from supervisor as non-blocking recv
           MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
@@ -144,6 +146,8 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         // update work index for new_pid
         assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
         assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
+
+        DEBUG_PRINT(("sent new unit of work"));
 
         // send updated array of times to supervisor
         MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);

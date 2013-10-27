@@ -59,7 +59,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
       //continue;
     }
     
-    DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
+    //DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
 
     //check for differences in working slaves
     for(i=0; i<number_of_slaves; i++) 
@@ -69,6 +69,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         //we have a good worker!
         if(assignment_time1[i] != assignment_time2[i])
         {
+          DEBUG_PRINT(("supervisor is impressed by his good worker"));
           complete_time[i] = assignment_time2[i] - assignment_time1[i];
           units_received++;
           tot_time += complete_time[i];
@@ -93,7 +94,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         assignment_time1 = assignment_time2;
       }
       
-      DEBUG_PRINT(("supervisor got through an iteration of his while loop"));
+      //DEBUG_PRINT(("supervisor got through an iteration of his while loop"));
       
     }
     
