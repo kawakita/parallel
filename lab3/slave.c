@@ -6,20 +6,20 @@
 #include <limits.h>
 
 // success probability
-static float p = 1.0;
+static float p = 0.8;
 
 // implement random_fail()
 int random_fail()
 {
-  /*srand((unsigned)time(NULL));
+  srand((unsigned)time(NULL));
   float r = ((float) rand())/RAND_MAX;
-  return r > p;*/
-  return 0;
+  return r > p;
 }
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
 {
   if (random_fail()) {      
+    //DEBUG_PRINT(("FAIIIIILLLLLL!!!!!!"));
     MPI_Finalize();
     exit (0);
     return 0;
@@ -51,8 +51,6 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
     {
       return;
     }
-
-    system("sleep 0.5");
 
     // check for kill signal for non-blocking recv
     computedResult = f->compute(&work);
