@@ -108,6 +108,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
       if(received_update) 
       {
         assignment_time1 = assignment_time2;
+        memcpy(assignment_time1, assignment_time2)
         MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
         
       }
