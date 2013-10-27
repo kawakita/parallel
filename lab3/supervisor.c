@@ -107,14 +107,12 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           failed_worker[i] = 1;
         }
       }
-
-      if(received_update) 
-      {
-        MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
-        DEBUG_PRINT(("Waiting for more updates :)"));
-      }
-      //DEBUG_PRINT(("supervisor got through an iteration of his while loop"));
     }
+    if(received_update)
+    {
+      MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
+    } 
+
   }
 }
 
