@@ -14,4 +14,4 @@ LinkedList;
 LinkedList * listFromArray(mw_work_t ** array);
 LinkedList * new_linkedlist_node();
 void move_node_to_end(LinkedList *);
-int list_length(LinkedList *)
+int list_length(LinkedList *);
