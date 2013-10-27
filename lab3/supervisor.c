@@ -69,7 +69,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     //check for differences in working slaves
     for(i=0; i<number_of_slaves; i++) 
     {
-      DEBUG_PRINT(("Slave %d started at time %e.", i, assignment_time1[i]));
+      //DEBUG_PRINT(("Slave %d started at time %e.", i, assignment_time1[i]));
       if(failed_worker[i] == 0)
       {
         //we have a good worker!
