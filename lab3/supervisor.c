@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 
 #include "mw.h"
 #include "def_structs.h"
@@ -7,13 +8,13 @@
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
   
-  DEBUG_PRINT("supervisor starting");
+  DEBUG_PRINT(("supervisor starting"));
   
   int number_of_slaves;
   MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
   number_of_slaves = number_of_slaves - 2;
   
-  MPI_Status status1, status2;
+  MPI_Status status, status1, status2;
   MPI_Request request1, request2;
   
   // keep track of start times
@@ -26,20 +27,19 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   int * failed_worker = calloc(sizeof(int), number_of_slaves);
 
   // supervisor does blocking receive to get list of workers and their start times
-  MPI_Recv(&assignment_time1, number_of_slaves, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+  MPI_Recv(&assignment_time1, number_of_slaves, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
   
   // calc approximate time diff between sup and master
   double master_time = assignment_time1[number_of_slaves-1];
   double mytime_off_by = MPI_Wtime() - master_time;
 
-  DEBUG_PRINT("supervisor knows when the workers started");
+  DEBUG_PRINT(("supervisor knows when the workers started"));
 
   int units_received = 0;
-  int failed_worker;
   int i;
   int kill_msg, flag1, flag2;
   
-  double tot_time=0, mean=0, stddev=0;
+  double tot_time=0, sq_err=0, mean=0, stddev=0, threshold=0;
   
   //waiting for updates on start times from master
   while(1) 
@@ -67,19 +67,16 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         //we have a good worker!
         if(assignment_time1[i] != assignment_time2[i])
         {
-          units_received++;
           complete_time[i] = assignment_time2[i] - assignment_time1[i];
+          units_received++;
           tot_time += complete_time[i];
-          
-          //we have enough data to update mean and create stddev
+          mean = tot_time/units_received;
+          sq_err += pow(complete_time[i] - mean, 2);
+          stddev = sqrt(sq_err/units_received);
+
+          //we have enough data to update threshold
           if(units_received >= number_of_slaves/2)
           {
-            mean = tot_time/units_received;
-            // only calc stddev once
-            if(stddev==0)
-            {
-              stddev = stdDev(complete_time);
-            }
             threshold = mean + 2*stddev;
           }
           
@@ -87,10 +84,11 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         //if we have enough data, we can tell if we have a bad worker :(
         else if(threshold>0 && MPI_Wtime() - mytime_off_by - assignment_time1[i] > threshold)
         {
-          MPI_Send(i, 1, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
+          MPI_Send(&i, 1, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
           failed_worker[i] = 1;
         }
-        //else assume the best
+        //else assume the best and update the array
+        assignment_time1 = assignment_time2;
       }
       
     }
@@ -100,13 +98,4 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   
 }
 
-double stdDev(double nums[])
-{
-  double sum = 0;
-  double mean = average(nums);
-  int i;
 
-  for(i = 0; i < maxNums; i++) sum += pow(nums[i]-mean, 2);
-
-  return sqrt(sum/maxNums);
-}
