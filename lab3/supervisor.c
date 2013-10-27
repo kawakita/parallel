@@ -27,7 +27,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   // supervisor does blocking receive to get list of workers and their start times
   MPI_Recv(assignment_time1, number_of_slaves, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-  
+ 
   // calc approximate time diff between sup and master
   double master_time = assignment_time1[number_of_slaves-1];
   double mytime_off_by = MPI_Wtime() - master_time;
@@ -41,7 +41,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   double tot_time=0, sq_err=0, mean=0, stddev=0, threshold=0;
   
   MPI_Irecv(&kill_msg, 1, MPI_INT, 0, KILL_TAG, MPI_COMM_WORLD, &request1);
-  MPI_Irecv(assignment_time2, 1, MPI_INT, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
+  MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
 
   //waiting for updates on start times from master
   while(1) 
@@ -61,7 +61,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
       //continue;
     } else 
     {
-      MPI_Irecv(assignment_time2, 1, MPI_INT, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
+      MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
     }
     
     //DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
@@ -69,7 +69,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     //check for differences in working slaves
     for(i=0; i<number_of_slaves; i++) 
     {
-      DEBUG_PRINT(("Slave %d started at time %f.", i, assignment_time1[i]));
+      DEBUG_PRINT(("Slave %d started at time %e.", i, assignment_time1[i]));
       if(failed_worker[i] == 0)
       {
         //we have a good worker!
