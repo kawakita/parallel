@@ -11,7 +11,6 @@ static float p = 0.7;
 // implement random_fail()
 int random_fail()
 {
-  srand((unsigned)time(NULL));
   float r = ((float) rand())/RAND_MAX;
   return r > p;
 }
@@ -45,6 +44,8 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
 
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  DEBUG_PRINT(("Seeded srand with %u", (unsigned) time(NULL) + rank));
+  srand((unsigned)time(NULL) + rank);
 
   while(1)
   {
