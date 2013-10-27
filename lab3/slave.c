@@ -6,9 +6,9 @@
 #include <limits.h>
 
 // success probability
-static float p = 0.8;
+static float p = 1.0;
 
-// TODO: implement random_fail()
+// implement random_fail()
 int random_fail()
 {
   srand((unsigned)time(NULL));

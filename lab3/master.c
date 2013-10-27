@@ -176,9 +176,9 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   end = MPI_Wtime();
   
-  printf("all %f s\n", end-start);
-  printf("create %f s\n", end_create-start_create);
-  printf("process %f s\n", end_results-start_results);
+  DEBUG_PRINT(("all %f s\n", end-start));
+  DEBUG_PRINT(("create %f s\n", end_create-start_create));
+  DEBUG_PRINT(("process %f s\n", end_results-start_results));
 }
 
 
