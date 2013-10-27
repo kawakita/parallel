@@ -21,6 +21,7 @@ static void debug_printf(const char * fmt, ...)
 	va_start(args, fmt);
 	vfprintf(stderr, fmt, args);
 	va_end(args);
+	fprintf(stderr, "\n");
 }
 
 #endif

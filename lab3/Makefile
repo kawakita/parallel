@@ -27,4 +27,4 @@ run_part1: $(PART1_SOURCES) $(PART1_EXEC)
 	$(CC) -DDEBUG=$(DEBUG) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o *~ *.*\# $(PART1_EXEC)
+	rm -f *.o *~ *.*\# $(PART1_EXEC) core*
