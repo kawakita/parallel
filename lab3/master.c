@@ -94,7 +94,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   int flag_fail = 0, flag_res = 0;
 
   // receive failure from supervisor as non-blocking recv
-  MPI_Irecv(&failure_id, 1, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_fail);
+  MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
 
   // receive result from workers as non-blocking recv
   MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
@@ -107,7 +107,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   while(num_results_received < num_work_units)
   {
     // send work if have failures or got results
-    while(flag_fail || flag_res)
+    while(flag_fail || flag_res && )
     {
       if (flag_fail)
       {
@@ -121,7 +121,10 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
           move_node_to_end(work_unit);
 
           // continue to receive failures from supervisor as non-blocking recv
-          MPI_Irecv(&failure_id, 1, MPI_INT, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_fail);
+          MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
+
+        // check for flag_fail again
+          MPI_Test(&request_fail, &flag_fail, &status_fail);
       }
 
       if (flag_res)
@@ -145,11 +148,13 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
         // send updated array of times to supervisor
         MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-      }
 
-      // check again for failure or result
-      MPI_Test(&request_fail, &flag_fail, &status_fail);
-      MPI_Test(&request_res, &flag_res, &status_res);
+          // continue to receive results from workers as non-blocking recv
+        MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
+
+        // check for flag_res again
+        MPI_Test(&request_res, &flag_res, &status_res);
+      }
     }
   }
 
