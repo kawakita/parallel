@@ -82,24 +82,26 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         //we have a good worker!
         if(assignment_time1[i] != assignment_time2[i] && flag2)
         {
-          DEBUG_PRINT(("supervisor is impressed by his good worker"));
+          DEBUG_PRINT(("supervisor is impressed by his good worker %d", i));
           complete_time[i] = assignment_time2[i] - assignment_time1[i];
           units_received++;
           tot_time += complete_time[i];
           mean = tot_time/units_received;
           sq_err += pow(complete_time[i] - mean, 2);
           stddev = sqrt(sq_err/units_received);
-          DEBUG_PRINT(("supervisor made a note of his good worker. %e is the mean", mean ));
+          //DEBUG_PRINT(("supervisor made a note of his good worker. %e is the mean", mean ));
           //we have enough data to update threshold
           if(units_received >= number_of_slaves/2)
           {
             threshold = mean + 2*stddev;
+            DEBUG_PRINT(("the threshold is %f", threshold));
           }
           
         }
         //if we have enough data, we can tell if we have a bad worker :(
         else if(threshold>0 && assignment_time1[i]==assignment_time2[i] && MPI_Wtime() - mytime_off_by - assignment_time1[i] > threshold)
         {
+          DEBUG_PRINT(("methinks someone is slacking %d", i));
           MPI_Send(&i, 1, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
           failed_worker[i] = 1;
         }
