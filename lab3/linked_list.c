@@ -33,7 +33,7 @@ int list_length(LinkedList * node)
 {
 	if(node == NULL) return 0;
 	int length = 1;
-	while(node->next != null)
+	while(node->next != NULL)
 	{
 		node = node->next;
 		length++;
