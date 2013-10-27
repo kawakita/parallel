@@ -10,12 +10,12 @@ void MW_Run(int argc, char **argv, struct mw_api_spec *f)
   
   if(0 == myid)
   {
-  	do_master_stuff(argc, argv, f);
+    do_master_stuff(argc, argv, f);
   }
-    else if(1 == myid)
-    {
-      do_supervisor_stuff(argc, argv, f);
-    }
+  else if(1 == myid)
+  {
+    do_supervisor_stuff(argc, argv, f);
+  }
   else
   {
     be_a_slave(argc, argv, f);
