@@ -48,6 +48,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     MPI_Test(&request1, &flag1, &status1);
     if(flag1)
     {
+      DEBUG_PRINT(("SUPERVISOR SUICIDE!"));
       exit(0);
     }
     
@@ -76,7 +77,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           mean = tot_time/units_received;
           sq_err += pow(complete_time[i] - mean, 2);
           stddev = sqrt(sq_err/units_received);
-
+          DEBUG_PRINT(("supervisor made a note of his good worker. %f is the stddev", stddev ));
           //we have enough data to update threshold
           if(units_received >= number_of_slaves/2)
           {
