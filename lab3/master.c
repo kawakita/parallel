@@ -107,7 +107,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   while(num_results_received < num_work_units)
   {
     // send work if have failures or got results
-    while(flag_fail || flag_res && )
+    while(flag_fail || flag_res)
     {
       if (flag_fail)
       {
