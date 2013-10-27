@@ -29,6 +29,18 @@ LinkedList * listFromArray(mw_work_t ** array)
 	return head;
 }
 
+int list_length(LinkedList * node)
+{
+	if(node == NULL) return 0;
+	int length = 1;
+	while(node->next != null)
+	{
+		node = node->next;
+		length++;
+	}
+	return length;
+}
+
 /*
  * Warning! This function messes up the structure
  * of the list. Which is okay, as long as you always
