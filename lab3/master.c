@@ -163,7 +163,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
     DEBUG_PRINT(("Murdering slave"));
     kill_slave(slave);
   }
-        
+
   start_results = MPI_Wtime();
   int err_code = f->result(num_results_received, received_results);
   end_results = MPI_Wtime();

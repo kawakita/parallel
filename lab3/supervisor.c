@@ -96,6 +96,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
             threshold = mean + 2*stddev;
             DEBUG_PRINT(("the threshold is %f", threshold));
           }
+          assignment_time1[i] = assignment_time2[i];
           
         }
         //if we have enough data, we can tell if we have a bad worker :(
@@ -110,7 +111,6 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
       if(received_update) 
       {
-        memcpy(assignment_time1, assignment_time2, sizeof(double) * number_of_slaves);
         MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
         
       }

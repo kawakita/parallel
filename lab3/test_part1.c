@@ -1,6 +1,6 @@
 #include <math.h>
 #include <gmp.h>
-#include <glib.h>
+//#include <glib.h>
 #include "mw_api.h"
 #include "def_structs.h"
 #include "debug.h"
@@ -52,7 +52,7 @@ int main (int argc, char **argv)
 
   MPI_Init (&argc, &argv);
 
-  GHashTable * table = g_hash_table_new(g_str_hash, g_str_equal);
+  //GHashTable * table = g_hash_table_new(g_str_hash, g_str_equal);
 
   f.create = create_work;
   f.result = process_results;
