@@ -52,7 +52,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     }
     
     //get a new start time array from master
-    MPI_Irecv(&assignment_time2, 1, MPI_INT, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
+    MPI_Irecv(assignment_time2, 1, MPI_INT, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
     MPI_Test(&request2, &flag2, &status2);
     if(!flag2)
     {

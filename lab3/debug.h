@@ -13,7 +13,7 @@
 
 //To use this macro, you use two layers of parentheses, like this:
 // DEBUG_PRINT(("Hello %s!\n", "world"));
-#define DEBUG_PRINT(x) if(DEBUG) do { debug_printf x ; } while(0)
+#define DEBUG_PRINT(x) if(DEBUG) do { fprintf(stderr, "%s[%d]: ", __FILE__, __LINE__); debug_printf x ; fprintf(stderr, "\n"); } while(0)
 
 static void debug_printf(const char * fmt, ...)
 {
@@ -21,7 +21,6 @@ static void debug_printf(const char * fmt, ...)
 	va_start(args, fmt);
 	vfprintf(stderr, fmt, args);
 	va_end(args);
-	fprintf(stderr, "\n");
 }
 
 #endif
