@@ -134,23 +134,26 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         // update number of results received
         num_results_received++;
 
-        // get work_unit
-        mw_work_t* work_unit = next_work_node->data;
+		if(next_work_node != NULL)
+		{
+			// get work_unit
+			mw_work_t* work_unit = next_work_node->data;
 
-        // send new unit of work
-        send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
+			// send new unit of work
+			send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
 
-        // update pointer
-        next_work_node = next_work_node->next;
+			// update pointer
+			next_work_node = next_work_node->next;
 
-        // update work index for new_pid
-        assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
-        assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
+			// update work index for new_pid
+			assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
+			assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
 
-        DEBUG_PRINT(("sent new unit of work"));
+			DEBUG_PRINT(("sent new unit of work"));
 
-        // send updated array of times to supervisor
-        MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+			// send updated array of times to supervisor
+			MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+		}
 
         // continue to receive results from workers as non-blocking recv
         MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, WORK_TAG, MPI_COMM_WORLD, &request_res);
