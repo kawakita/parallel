@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "linked_list.h"
 
 LinkedList * new_linkedlist_node()
@@ -21,10 +22,12 @@ LinkedList * listFromArray(mw_work_t ** array)
 	while(*array_iterator != NULL)
 	{
 		LinkedList * next_node = new_linkedlist_node();
+        assert(next_node->next == NULL);
 		next_node->data = *array_iterator;
 		array_iterator++;
 		current_node->next = next_node;
 		current_node = current_node->next;
+        assert(current_node->next == NULL);
 	}
 	return head;
 }
@@ -52,6 +55,7 @@ void move_node_to_end(LinkedList * node)
 	if(node == NULL)
 	{
 		DEBUG_PRINT(("Failed to move node to end of list, node is NULL"));
+        return;
 	}
 	LinkedList * end = node;
 	while(end->next != NULL)

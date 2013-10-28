@@ -107,7 +107,6 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           MPI_Send(&i, 1, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
           failed_worker[i] = 1;
         }
-        
       }
     }
     if(received_update)

@@ -6,7 +6,7 @@
 #include <limits.h>
 
 // success probability
-static float p = 0.7;
+static float p = 0.9;
 
 // implement random_fail()
 int random_fail()
