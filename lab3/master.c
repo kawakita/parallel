@@ -130,13 +130,15 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         LinkedList * work_unit = assignment_ptrs[failure_id];
         are_you_down[failure_id] = 1; //this slave is considered dead :(
 
-        assert(work_unit != NULL);
-        move_node_to_end(work_unit);
-        if(next_work_node == NULL)
+        if(work_unit != NULL)
         {
-            next_work_node = work_unit;
+            move_node_to_end(work_unit);
+            if(next_work_node == NULL)
+            {
+                next_work_node = work_unit;
+            }
+            assert(next_work_node != NULL);
         }
-        assert(next_work_node != NULL);
         assignment_ptrs[failure_id] = NULL;
         flag_fail = 0;
         // continue to receive failures from supervisor as non-blocking recv
@@ -146,7 +148,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
     int idle_process = -1, i;
     for(i=0; i<number_of_slaves-2; ++i)
     {
-        if(assignment_time[i] == 0.0)
+        if(assignment_time[i] == 0.0 && !are_you_down[i])
         {
             idle_process = i;
             break;
@@ -213,6 +215,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
             DEBUG_PRINT(("Worker %d is now idle, I ain't got shit for him to do", worker_number));
             assignment_time[worker_number] = 0.0;
             assignment_ptrs[worker_number] = NULL;
+            MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
         }
       }
       // continue to receive results from workers as non-blocking recv
