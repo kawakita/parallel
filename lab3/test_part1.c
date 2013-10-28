@@ -5,6 +5,8 @@
 #include "def_structs.h"
 #include "debug.h"
 
+#define DEBUG 0
+
 mw_work_t ** create_work(int argc, char ** arv)
 {
   const int total_work = 25;
@@ -25,14 +27,7 @@ int process_results(int sz, mw_result_t * res)
   for(i=0; i<sz; ++i)
   {
     DEBUG_PRINT(("%f", res[i].k));
-    if(res[i].k == M_PI)
-	{
-      DEBUG_PRINT(("Found some pi!"));
-	}
-    else
-	{
-      DEBUG_PRINT(("No pi here :("));
-	}
+    DEBUG_TEST(res[i].k == M_PI);
   }
   return 0;
 }
@@ -41,6 +36,7 @@ mw_result_t * do_work(mw_work_t * work)
 {
   mw_result_t * result = malloc(sizeof(mw_result_t));
   result->k = M_PI;
+  //system("sleep 0.1");
   DEBUG_PRINT(("created result %f\n", M_PI));
   return result;
 }

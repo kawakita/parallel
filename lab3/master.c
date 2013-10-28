@@ -121,7 +121,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
     {
         // change inactive workers array
         //inactive_workers[status_fail.MPI_SOURCE-2] = 1;
-        DEBUG_PRINT(("received failure"));
+        DEBUG_PRINT(("received failure from supervisor"));
 
         // get work_unit that needs to be reassigned
         LinkedList * work_unit = assignment_ptrs[failure_id];
@@ -137,6 +137,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         else
         {
             move_node_to_end(work_unit);
+            assignment_ptrs[failure_id] = NULL;
         }
 
         flag_fail = 0;
@@ -155,7 +156,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
       if(next_work_node == NULL && list_end != NULL && list_end->next != NULL)
       {
           next_work_node = list_end->next;
-          list_end == NULL;
+          list_end = NULL;
       }
       if(next_work_node != NULL)
       {

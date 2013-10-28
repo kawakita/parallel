@@ -8,8 +8,8 @@
 #define DEBUG 0
 #endif
 
-#define DEBUG_TEST(x, y)\
-	if(x != y) { fprintf(stderr, "TEST FAILURE: %s != %s. %s %d %s\n",  __FILE__, __LINE__, __func__); } else
+#define DEBUG_TEST(x)\
+	if(!x) { fprintf(stderr, "TEST FAILURE: %s+%d in %s\n",  __FILE__, __LINE__, __func__); } else
 
 //To use this macro, you use two layers of parentheses, like this:
 // DEBUG_PRINT(("Hello %s!\n", "world"));

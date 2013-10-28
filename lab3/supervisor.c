@@ -78,7 +78,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
       {
           if(sent_fail == 1)
           {
-              DEBUG_PRINT(("RECEIVED AN UPDATE AFTER SENDING A FAILURE!!!!!!!!"));
+              //DEBUG_PRINT(("RECEIVED AN UPDATE AFTER SENDING A FAILURE!!!!!!!!"));
           }
 
         //DEBUG_PRINT(("for worker %d, assignment_time1 == assignment_time2 is %s", i, assignment_time1[i] == assignment_time2[i] ? "TRUE" : "FALSE"));
@@ -100,7 +100,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           if(units_received >= number_of_slaves/2)
           {
             DEBUG_PRINT(("the stddev is %f", stddev));
-            threshold = mean + 10*stddev;
+            threshold = mean + 10*stddev + 1.0;
             DEBUG_PRINT(("the threshold is %f", threshold));
           }
           assignment_time1[i] = assignment_time2[i];

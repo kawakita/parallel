@@ -44,12 +44,6 @@ int list_length(LinkedList * node)
 	return length;
 }
 
-/*
- * Warning! This function messes up the structure
- * of the list. Which is okay, as long as you always
- * have a reference to a node ahead of the node being
- * moved to the end of the list.
- */
 void move_node_to_end(LinkedList * node)
 {
 	if(node == NULL)
@@ -62,6 +56,7 @@ void move_node_to_end(LinkedList * node)
 	{
 		end = end->next;
 	}
-	end->next = node;
-	node->next = NULL;
+    LinkedList * new_end_node = new_linkedlist_node();
+    new_end_node->data = node->data;
+	end->next = new_end_node;
 }
