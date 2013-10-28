@@ -93,7 +93,8 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           //we have enough data to update threshold
           if(units_received >= number_of_slaves/2)
           {
-            threshold = mean + 2*stddev;
+            DEBUG_PRINT(("the stddev is %f", stddev));
+            threshold = mean + 10*stddev;
             DEBUG_PRINT(("the threshold is %f", threshold));
           }
           assignment_time1[i] = assignment_time2[i];
