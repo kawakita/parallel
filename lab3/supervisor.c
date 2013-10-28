@@ -71,20 +71,22 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     //DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
 
     //check for differences in working slaves
-    int sent_fail = 0;
     for(i=0; i<number_of_slaves; i++) 
     {
-      if(received_update)
-      {
-          if(sent_fail == 1)
-          {
-              //DEBUG_PRINT(("RECEIVED AN UPDATE AFTER SENDING A FAILURE!!!!!!!!"));
-          }
-
-        //DEBUG_PRINT(("for worker %d, assignment_time1 == assignment_time2 is %s", i, assignment_time1[i] == assignment_time2[i] ? "TRUE" : "FALSE"));
-      }
       if(failed_worker[i] == 0)
       {
+        if(assignment_time1[i] == 0.0 && assignment_time2[i] != 0.0)
+        {
+          //a previously idle worked got assigned something
+          assignment_time1[i] = assignment_time2[i];
+          continue;
+        }
+        if(assignment_time2[i] == 0.0)
+        {
+          //worker is currently idle, not dead
+          assignment_time1[i] = 0.0;
+          continue;
+        }
         //we have a good worker!
         if(assignment_time1[i] != assignment_time2[i] && received_update)
         {
@@ -95,7 +97,6 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
           mean = tot_time/units_received;
           sq_err += pow(complete_time[i] - mean, 2);
           stddev = sqrt(sq_err/units_received);
-          //DEBUG_PRINT(("supervisor made a note of his good worker. %e is the mean", mean ));
           //we have enough data to update threshold
           if(units_received >= number_of_slaves/2)
           {
@@ -110,10 +111,8 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         else if(threshold>0 && assignment_time1[i]==assignment_time2[i] && MPI_Wtime() - mytime_off_by - assignment_time1[i] > threshold)
         {
           DEBUG_PRINT(("methinks someone is slacking %d", i));
-          DEBUG_PRINT(("Threshold is %f, time delta is %f - %f - %f = %f", threshold, MPI_Wtime(), mytime_off_by, assignment_time1[i], MPI_Wtime() - mytime_off_by - assignment_time1[i]));
           MPI_Send(&i, 1, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
           failed_worker[i] = 1;
-          sent_fail = 1;
         }
       }
     }
