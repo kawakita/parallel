@@ -5,10 +5,12 @@
 #include "mw.h"
 #include "def_structs.h"
 
+#define DEBUG 0
+
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
   
-  DEBUG_PRINT(("supervisor starting"));
+  //DEBUG_PRINT(("supervisor starting"));
   
   int number_of_slaves;
   MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
@@ -34,7 +36,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   double master_time = assignment_time1[number_of_slaves-1];
   double mytime_off_by = MPI_Wtime() - master_time;
 
-  DEBUG_PRINT(("supervisor knows when the workers started"));
+  //DEBUG_PRINT(("supervisor knows when the workers started"));
 
   int units_received = 0;
   int i;
@@ -53,71 +55,83 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     MPI_Test(&request1, &flag1, &status1);
     if(flag1)
     {
-      DEBUG_PRINT(("SUPERVISOR SUICIDE!"));
+      //DEBUG_PRINT(("SUPERVISOR SUICIDE!"));
       return;
     }
     
     //get a new start time array from master
     MPI_Test(&request2, &received_update, &status2);
-    if(!received_update)
+    if(received_update)
     {
-      //continue;
-    } 
-    else 
-    {
-      DEBUG_PRINT(("got an update from master"));
+      //DEBUG_PRINT(("got an update from master"));
     }
     
     //DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
 
+    int found_change = 0;
     //check for differences in working slaves
     for(i=0; i<number_of_slaves; i++) 
     {
-      if(failed_worker[i] == 0)
+      if(failed_worker[i] != 0)
       {
-        if(assignment_time1[i] == 0.0 && assignment_time2[i] != 0.0)
+        continue;
+      }
+      if(assignment_time1[i] == 0.0 && assignment_time2[i] != 0.0)
+      {
+        //a previously idle worked got assigned something
+        assignment_time1[i] = assignment_time2[i];
+        found_change = 1;
+        DEBUG_PRINT(("Worker %d just got off his lazy ass", i));
+        continue;
+      }
+      if(assignment_time2[i] == 0.0)
+      {
+        //worker is currently idle, not dead
+        if(assignment_time1[i] != 0.0)
         {
-          //a previously idle worked got assigned something
-          assignment_time1[i] = assignment_time2[i];
-          continue;
+            DEBUG_PRINT(("Just found out %d is idle", i));
+            assignment_time1[i] = 0.0;
+            found_change = 1;
         }
-        if(assignment_time2[i] == 0.0)
+        continue;
+      }
+
+      //we have a good worker!
+      if(assignment_time1[i] != assignment_time2[i] && received_update)
+      {
+        //DEBUG_PRINT(("supervisor is impressed by his good worker %d", i));
+        complete_time[i] = assignment_time2[i] - assignment_time1[i];
+        units_received++;
+        tot_time += complete_time[i];
+        mean = tot_time/units_received;
+        sq_err += pow(complete_time[i] - mean, 2);
+        stddev = sqrt(sq_err/units_received);
+        //we have enough data to update threshold
+        if(units_received >= number_of_slaves/2)
         {
-          //worker is currently idle, not dead
-          assignment_time1[i] = 0.0;
-          continue;
+          //DEBUG_PRINT(("the stddev is %f", stddev));
+          threshold = mean + 10*stddev + 0.1;
+          //DEBUG_PRINT(("the threshold is %f", threshold));
         }
-        //we have a good worker!
-        if(assignment_time1[i] != assignment_time2[i] && received_update)
-        {
-          DEBUG_PRINT(("supervisor is impressed by his good worker %d", i));
-          complete_time[i] = assignment_time2[i] - assignment_time1[i];
-          units_received++;
-          tot_time += complete_time[i];
-          mean = tot_time/units_received;
-          sq_err += pow(complete_time[i] - mean, 2);
-          stddev = sqrt(sq_err/units_received);
-          //we have enough data to update threshold
-          if(units_received >= number_of_slaves/2)
-          {
-            DEBUG_PRINT(("the stddev is %f", stddev));
-            threshold = mean + 10*stddev + 0.01;
-            DEBUG_PRINT(("the threshold is %f", threshold));
-          }
-          assignment_time1[i] = assignment_time2[i];
-          
-        }
-        //if we have enough data, we can tell if we have a bad worker :(
-        else if(threshold>0 && assignment_time1[i]==assignment_time2[i] && MPI_Wtime() - mytime_off_by - assignment_time1[i] > threshold)
-        {
-          DEBUG_PRINT(("methinks someone is slacking %d", i));
-          MPI_Send(&i, 1, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
-          failed_worker[i] = 1;
-        }
+        assignment_time1[i] = assignment_time2[i];
+        found_change = 1;
+        
+      }
+      //if we have enough data, we can tell if we have a bad worker :(
+      else if(threshold>0 && assignment_time1[i]==assignment_time2[i] && MPI_Wtime() - mytime_off_by - assignment_time1[i] > threshold)
+      {
+        assert(assignment_time1[i] != 0.0);
+        DEBUG_PRINT(("methinks someone is slacking %d", i));
+        MPI_Send(&i, 1, MPI_INT, 0, FAIL_TAG, MPI_COMM_WORLD);
+        failed_worker[i] = 1;
       }
     }
     if(received_update)
     {
+      if(found_change == 0)
+      {
+          DEBUG_PRINT(("Received an update without any change :("));
+      }
       MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
     } 
   }

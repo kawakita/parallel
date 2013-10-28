@@ -5,8 +5,6 @@
 #include "def_structs.h"
 #include "linked_list.h"
 
-#define DEBUG 0
-
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
 void kill_slave(int slave);
 int get_total_units(mw_work_t ** work_list);
@@ -126,19 +124,28 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
     {
         // change inactive workers array
         //inactive_workers[status_fail.MPI_SOURCE-2] = 1;
-        DEBUG_PRINT(("received failure from supervisor"));
+        DEBUG_PRINT(("received failure from supervisor, process %d", failure_id));
 
         // get work_unit that needs to be reassigned
         LinkedList * work_unit = assignment_ptrs[failure_id];
 
         if(work_unit != NULL)
         {
+            DEBUG_PRINT(("Moving assignment at %p to end of the queue", work_unit));
             move_node_to_end(work_unit);
             if(next_work_node == NULL)
             {
                 next_work_node = work_unit;
             }
             assert(next_work_node != NULL);
+        }
+        if(assignment_time[failure_id] == 0.0)
+        {
+            DEBUG_PRINT(("Failure on idle process %d. WTF??", failure_id));
+        }
+        if(are_you_down[failure_id] == 1)
+        {
+            DEBUG_PRINT(("Failure on a process which is already failed. WTF??"));
         }
         are_you_down[failure_id] = 1; //this slave is considered dead :(
         assignment_ptrs[failure_id] = NULL;
@@ -165,7 +172,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         assignment_ptrs[idle_process] = next_work_node;
         assignment_time[idle_process] = MPI_Wtime();
         MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-        DEBUG_PRINT(("Gave an assignment to previously idle process %d", idle_process));
+        DEBUG_PRINT(("Gave an assignment to previously idle process %d, assignment at %p", idle_process, next_work_node));
         if(next_work_node->next == NULL)
         {
             list_end = next_work_node;
