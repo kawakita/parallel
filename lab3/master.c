@@ -1,9 +1,11 @@
-#include <stdio.h>
+
 #include <assert.h>
 
 #include "mw.h"
 #include "def_structs.h"
 #include "linked_list.h"
+
+#define DEBUG 0
 
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
 void kill_slave(int slave);
@@ -128,7 +130,6 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
         // get work_unit that needs to be reassigned
         LinkedList * work_unit = assignment_ptrs[failure_id];
-        are_you_down[failure_id] = 1; //this slave is considered dead :(
 
         if(work_unit != NULL)
         {
@@ -139,7 +140,10 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
             }
             assert(next_work_node != NULL);
         }
+        are_you_down[failure_id] = 1; //this slave is considered dead :(
         assignment_ptrs[failure_id] = NULL;
+        assignment_time[failure_id] = 0.0;
+        MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
         flag_fail = 0;
         // continue to receive failures from supervisor as non-blocking recv
         MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
@@ -215,6 +219,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
             DEBUG_PRINT(("Worker %d is now idle, I ain't got shit for him to do", worker_number));
             assignment_time[worker_number] = 0.0;
             assignment_ptrs[worker_number] = NULL;
+            assert(!are_you_down[worker_number]);
             MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
         }
       }

@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#define DEBUG 0
+
 // success probability
 static float p = 1.95;
 
