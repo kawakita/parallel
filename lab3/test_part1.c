@@ -5,7 +5,7 @@
 
 mw_work_t ** create_work(int argc, char ** arv)
 {
-  const int total_work = 100;
+  const int total_work = 10;
   mw_work_t ** work_list = calloc(total_work, sizeof(mw_work_t*) + 1);
   int i=0;
   for(i=0; i<total_work; ++i)
@@ -44,6 +44,8 @@ char * result_to_str(mw_result_t result)
   char* s = malloc(1000);
   double d = result.k;
 
+  printf("after s malloc\n");
+
   sprintf(s, "%f", d);
   return s;
 }
@@ -66,6 +68,8 @@ int main (int argc, char **argv)
   f.create = create_work;
   f.result = process_results;
   f.compute = do_work;
+  f.result_to_str = result_to_str;
+  f.str_to_result = str_to_result;
   f.work_sz = sizeof(struct userdef_work_t);
   f.res_sz = sizeof(struct userdef_result_t);
 

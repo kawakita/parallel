@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#define DEBUG 1
+
 void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
 void kill_slave(int slave);
 int get_total_units(mw_work_t ** work_list);
@@ -130,6 +132,11 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   
   int ping_sup = 0;
 
+  // clear out file
+  FILE * fptr;
+  fptr = fopen("recovery.txt", "w");
+  fclose(fptr);
+
   // send units of work while haven't received all results
   while(num_results_received < num_work_units)
   {
@@ -214,13 +221,17 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
       int worker_number = status_res.MPI_SOURCE-2;
       if(!are_you_down[worker_number]) //If this slave is marked dead, just ignore him
       {
+        DEBUG_PRINT(("str %f", received_results[num_results_received].k));
+        
         // save index and result received to file
         FILE * fptr;
-        fptr = fopen("recovery.txt", "w");
+        fptr = fopen("recovery.txt", "a");
+        DEBUG_PRINT(("worker_number %d", worker_number));
         int index = assignment_indices[worker_number];
-        //char *s = f->result_to_str(received_results[num_results_received]);
-        DEBUG_PRINT(("str %f", received_results[num_results_received].k));
-        fprintf(fptr, "%d\n", index);
+        DEBUG_PRINT(("index %d", index));
+        char *s = f->result_to_str(received_results[num_results_received]);
+        DEBUG_PRINT(("str %d %s", index, s));
+        fprintf(fptr, "%d %s\n", index, s);
         fclose(fptr);
 
         // update number of results received
@@ -238,8 +249,8 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
           mw_work_t* work_unit = work_array[next_work_node->index];
 
           // send new unit of work
-          F_Send(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD, rank);        
-          //send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
+          //F_Send(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD, rank);        
+          send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
 
           // update pointer
           if(next_work_node->next == NULL)

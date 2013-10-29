@@ -55,7 +55,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   }
   if(!master_started_flag) 
   {
-    DEBUG_PRINT(("SUPERVISOR: MASTER FAILED\n"));
+    DEBUG_PRINT(("SUPERVISOR: MASTER FAILED before assigning work\n"));
     global_master_fail = 1;
     return;
   }
@@ -131,22 +131,27 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
       work_list_array = f->create(argc, argv);
       int num_work_units = get_total_units(work_list_array);
       mw_result_t ** received_results = calloc(num_work_units, f->res_sz);
+      int * whos_working_on_what = malloc(num_work_units*sizeof(int));
+      
+      MPI_Request slave_request;
+      MPI_Status slave_status;
 
       char *infile = "recovery.txt";
       FILE *file = fopen(infile,"r");
       if (file != NULL) //there are results to process
       {
-        int result_index;
-        char result[1000];
+        int result_index, process_id;
 
-        while(fscanf(file, "%d %s", &result_index, result) != EOF)
+        while(fscanf(file, "%d %d", &result_index, &process_id) != EOF)
         {
-          printf("%d %s\n", result_index, result);          
-          received_results[result_index] = f->str_to_result(result);
+          printf("%d %s\n", result_index, process_id);          
+          whos_working_on_what[result_index] = process_id;
         }
       }
-      //figure out what work still needs to be done
-      
+      //receive all initial messages
+      for(i=0; i<num_work_units; i++) {
+        //MPI_Irecv(received_results[i], f->res_sz, MPI_CHAR, WORK_TAG, MPI_COMM_WORLD, &slave_request);
+      }
       for(i=0; i<num_work_units; i++) {
         if (received_results[i] == NULL) {
           addNode(work_num_list, i);
