@@ -225,7 +225,7 @@ mw_result_t * do_work(mw_work_t * work)
   }
   return result;
 }
-
+/*
 char * result_to_str(mw_result_t result)
 {
   char s[32];
@@ -242,7 +242,7 @@ mw_result_t str_to_result(char * s)
   result.k = d;
   return result;
 }
-
+*/
 
 int main (int argc, char **argv)
 {
