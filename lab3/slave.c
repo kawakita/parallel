@@ -64,7 +64,7 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
     //DEBUG_PRINT(("Result computed!"));
     // send unit of work to master with probability p
     F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD, rank);
-    // F_Send(computedResult, f->res_sz, MPI_CHAR, 1, WORK_TAG, MPI_COMM_WORLD, rank);
+    F_Send(computedResult, f->res_sz, MPI_CHAR, 1, WORK_TAG, MPI_COMM_WORLD, rank);
     //DEBUG_PRINT(("result sent"));
 
     // send ping after unit of work is possibly sent
