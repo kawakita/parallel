@@ -5,8 +5,6 @@
 #include "mw.h"
 #include "def_structs.h"
 
-#define DEBUG 1
-
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
   
