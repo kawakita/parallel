@@ -5,6 +5,7 @@ LinkedList * new_linkedlist_node()
 {
 	LinkedList * new_node = malloc(sizeof(LinkedList));
 	new_node->next = NULL;
+        new_node->index = -1;
 	new_node->data = NULL;
 	return new_node;
 }

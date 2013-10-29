@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
-
+#include "linked_list.h"
 #include "mw.h"
 #include "def_structs.h"
+
+#define DEBUG 1
 
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
@@ -14,7 +16,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
   number_of_slaves = number_of_slaves - 2;
   
-  MPI_Status status, status1, status2;
+  MPI_Status status1, status2;
   MPI_Request request1, request2;
   
   // keep track of start times
@@ -26,10 +28,31 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   // booleans for failure
   int * failed_worker = calloc(sizeof(int), number_of_slaves);
 
-  // supervisor does blocking receive to get list of workers and their start times
-  MPI_Recv(assignment_time1, number_of_slaves, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-  //assignment_time2 = assignment_time1;
+  double master_threshold = 2; //give a lot of time to create work
+  double last_master_ping = MPI_Wtime();
 
+  // supervisor does nonblocking receive to get list of workers and their start times
+  MPI_Request master_request;
+  MPI_Status master_status;
+  int master_started_flag = 0;
+  int global_master_fail = 0;
+
+  MPI_Irecv(assignment_time1, number_of_slaves, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &master_request);
+  while(!master_started_flag && MPI_Wtime()<last_master_ping+master_threshold) 
+  {
+    MPI_Test(&master_request, &master_started_flag, &master_status);
+    if(master_started_flag) last_master_ping = MPI_Wtime();
+  }
+  if(!master_started_flag) 
+  {
+    DEBUG_PRINT(("SUPERVISOR: MASTER FAILED\n"));
+    global_master_fail = 1;
+    return;
+  }
+  
+  //give less time for periodic pings
+  master_threshold = 0.01;
+  
   // calc approximate time diff between sup and master
   double master_time = assignment_time1[number_of_slaves-1];
   double mytime_off_by = MPI_Wtime() - master_time;
@@ -38,33 +61,89 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   int units_received = 0;
   int i;
-  int kill_msg, flag1, received_update;
+  
   
   double tot_time=0, sq_err=0, mean=0, stddev=0, threshold=0;
-  
-  //set up receivers for kill and master updates
-  MPI_Irecv(&kill_msg, 1, MPI_INT, 0, KILL_TAG, MPI_COMM_WORLD, &request1);
-  MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
+  int kill_msg, flag1, received_update;
+  int master_ping=0;
+  int supervisor_took_over = 0;
 
+  //set up receivers for kill and master updates
+  if(!global_master_fail)
+  {
+    MPI_Irecv(&kill_msg, 1, MPI_INT, 0, KILL_TAG, MPI_COMM_WORLD, &request1);
+    MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
+    MPI_Irecv(&master_ping, 1, MPI_INT, 0, M_PING_TAG, MPI_COMM_WORLD, &master_request);
+  }
+  
   //waiting for updates on start times from master
   while(1) 
   {
-    //kill myself if the master says so  
-    MPI_Test(&request1, &flag1, &status1);
-    if(flag1)
+    
+    if(!global_master_fail)
     {
-      //DEBUG_PRINT(("SUPERVISOR SUICIDE!"));
+      //kill myself if the master says so  
+         MPI_Test(&request1, &flag1, &status1);
+         if(flag1)
+         {
+           DEBUG_PRINT(("SUPERVISOR SUICIDE!"));
+           return;
+         }
+
+         //get a new start time array from master
+         MPI_Test(&request2, &received_update, &status2);
+         if(received_update)
+         {
+           DEBUG_PRINT(("got an update from master"));
+         }
+
+         //test for updates from supervisor
+         MPI_Test(&master_request, &master_ping, &master_status);
+         if(master_ping) 
+         {
+           MPI_Irecv(&master_ping, 1, MPI_INT, 0, M_PING_TAG, MPI_COMM_WORLD, &master_request);
+           last_master_ping = MPI_Wtime();
+         }
+         else if(!master_ping && MPI_Wtime() > last_master_ping+master_threshold)
+         {
+           DEBUG_PRINT(("SUPE: MASTER FAILED AFTER WORK ASSIGNMENT"));
+           global_master_fail = 1;
+           return;
+         } 
+
+       //DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
+    }
+    
+    if(global_master_fail && !supervisor_took_over)
+    {
+      LinkedList * work_num_list;
+      mw_work_t ** work_list_array;
+      work_list_array = f->create(argc, argv);
+      int num_work_units = get_total_units(work_list);
+      mw_result_t * received_results =  malloc(f->res_sz * num_work_units);
+
+      char *infile = "recovery.txt";
+      FILE *f = fopen(infile,"r");
+      if (f == NULL) //master hasnt received any results
+      {
+        //TODO create work 
+      }
+      else
+      {
+        int result_index;
+        char result[1000];
+
+        while(fscanf(f, "%d %s", &result_index, result) != EOF)
+        {
+          printf("%d %s\n", result_index, result);          
+          received_results[result_index] = f->str_to_result(result);
+        }
+      }
+      //TODO figure out what work still needs to be done
+      work_list = listFromArray(work_list_array);
+      supervisor_took_over=1;
       return;
     }
-    
-    //get a new start time array from master
-    MPI_Test(&request2, &received_update, &status2);
-    if(received_update)
-    {
-      //DEBUG_PRINT(("got an update from master"));
-    }
-    
-    //DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
 
     int found_change = 0;
     //check for differences in working slaves

@@ -5,8 +5,9 @@
 
 typedef struct LinkedList
 {
-	struct LinkedList * next;
-	mw_work_t * data;
+  struct LinkedList * next;
+  int index;    
+  mw_work_t * data;
 }
 LinkedList;
 
