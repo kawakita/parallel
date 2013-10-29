@@ -13,7 +13,6 @@ int get_total_units(mw_work_t ** work_list);
 
 void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
-
   DEBUG_PRINT(("master starting"));
 
   int number_of_nonslaves = 2;
@@ -57,9 +56,6 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   // make array keeping track of pointers for work that's active
   LinkedList* assignment_ptrs[number_of_slaves];
-
-  // make array keeping track of indices for work that's active
-  int assignment_indices[number_of_slaves];
 
   // create array of start times
   double assignment_time[number_of_slaves];
@@ -116,17 +112,20 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
   MPI_Request request_fail, request_res;
   int flag_fail = 0, flag_res = 0;
 
-  DEBUG_PRINT(("%d", number_of_slaves));
-
   // receive failure from supervisor as non-blocking recv
   MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
 
   // receive result from workers as non-blocking recv
   MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
 
+  int ping_sup = 0;
+
   // send units of work while haven't received all results
   while(num_results_received < num_work_units)
   {
+    // send ping to supervisor
+    MPI_Send(&ping_sup, 1, MPI_INT, 1, M_PING_TAG, MPI_COMM_WORLD);
+
     // check for flag_fail again
     MPI_Test(&request_fail, &flag_fail, &status_fail);
 
@@ -136,7 +135,6 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
     // send work if have failures or got results
     if (flag_fail)
     {
-
         DEBUG_PRINT(("received failure from supervisor, process %d", failure_id));
 
         // get work_unit that needs to be reassigned

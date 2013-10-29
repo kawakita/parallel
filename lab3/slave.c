@@ -19,7 +19,7 @@ int random_fail()
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank)
 {
-  if (rank ==0 || rank == 5 || random_fail()) {      
+  if (rank == 0 || rank == 5 || random_fail()) {      
     DEBUG_PRINT(("%d FAIIIIILLLLLL!!!!!!", rank));
     MPI_Finalize();
     exit (0);
@@ -64,9 +64,8 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
     //DEBUG_PRINT(("Result computed!"));
     // send unit of work to master with probability p
     F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD, rank);
-    //DEBUG_PRINT(("result sent"));
+    // send unit of work to backup master with probability p
+    F_Send(computedResult, f->res_sz, MPI_CHAR, 2, WORK_TAG, MPI_COMM_WORLD, rank);
 
-    // send ping after unit of work is possibly sent
-    //MPI_Send(&ping, 1, MPI_INT, 1, WORK_SUP_TAG, MPI_COMM_WORLD);
   }
 }
