@@ -13,9 +13,6 @@ int get_total_units(mw_work_t ** work_list);
 int random_fail();
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank);
 
-// success probability
-static float p = 1.95;
- 
 void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
 
@@ -47,7 +44,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   int slave=1, num_work_units=0;
 
-  num_work_units = list_length(work_list);
+  num_work_units = get_total_units(work_list);
 
   mw_result_t * received_results =  malloc(f->res_sz * num_work_units);
   if (received_results == NULL)
@@ -60,6 +57,9 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   // make array keeping track of pointers for work that's active
   LinkedList* assignment_ptrs[number_of_slaves-2];
+
+  // make array keeping track of indices for work that's active
+  int assignment_indices[number_of_slaves-2];
 
   // make array of binary indicators for inactive workers
   // initially all workers are active and 0
@@ -87,12 +87,14 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
       break;
     }
 
-    mw_work_t * work_unit = next_work_node->data;
+    mw_work_t * work_unit = work_array[next_work_node->index];
 
     send_to_slave(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
 
     // save next_work_node to assigned work
+    assignment_indices[slave-2] = next_work_node->index;
     assignment_ptrs[slave-2] = next_work_node;
+    assert(assignment_indices[slave-2] != -1);
     assert(assignment_ptrs[slave-2] != NULL);
     
     // save start time
@@ -161,6 +163,10 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         }
         assert(next_work_node != NULL);
       }
+      if(assignment_indices[failure_id] == -1)
+      {
+        DEBUG_PRINT(("Failure on idle process %d. WTF??", failure_id));
+      } 
       if(assignment_time[failure_id] == 0.0)
       {
         DEBUG_PRINT(("Failure on idle process %d. WTF??", failure_id));
@@ -170,6 +176,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         DEBUG_PRINT(("Failure on a process which is already failed. WTF??"));
       }
       are_you_down[failure_id] = 1; //this slave is considered dead :(
+      assignment_indices[failure_id] = -1;
       assignment_ptrs[failure_id] = NULL;
       assignment_time[failure_id] = 0.0;
       MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
@@ -190,7 +197,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
     if(next_work_node != NULL && idle_process > -1)
     {
-      send_to_slave(next_work_node->data, f->work_sz, MPI_CHAR, idle_process+2, WORK_TAG, MPI_COMM_WORLD);
+      send_to_slave(work_array[next_work_node->index], f->work_sz, MPI_CHAR, idle_process+2, WORK_TAG, MPI_COMM_WORLD);
       assignment_ptrs[idle_process] = next_work_node;
       assignment_time[idle_process] = MPI_Wtime();
       MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
@@ -207,21 +214,13 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
       int worker_number = status_res.MPI_SOURCE-2;
       if(!are_you_down[worker_number]) //If this slave is marked dead, just ignore him
       {
-        DEBUG_PRINT(("I'm here!"));
         // save index and result received to file
         FILE * fptr;
         fptr = fopen("recovery.txt", "w");
-        int index = 0;
-        // have ptr to different indices of work_array
-        mw_work_t** work_array_ptr = work_array;
-        // compare addresses
-        while (*work_array_ptr != assignment_ptrs[worker_number])
-        {
-          DEBUG_PRINT(("index: %d", index));
-          work_array_ptr++;
-          index++;
-        }
-        fprintf(fptr, "%d %s\n", index, f->result_to_str(received_results[num_results_received])); 
+        int index = assignment_indices[worker_number];
+        //char *s = f->result_to_str(received_results[num_results_received]);
+        DEBUG_PRINT(("str %f", received_results[num_results_received].k));
+        fprintf(fptr, "%d\n", index);
         fclose(fptr);
 
         // update number of results received
@@ -236,10 +235,11 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         if(next_work_node != NULL)
         {
           // get work_unit
-          mw_work_t* work_unit = next_work_node->data;
+          mw_work_t* work_unit = work_array[next_work_node->index];
 
           // send new unit of work
-          send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
+          F_Send(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD, rank);        
+          //send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
 
           // update pointer
           if(next_work_node->next == NULL)
@@ -250,10 +250,10 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
           // update work index for new_pid
           assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
           assert(assignment_ptrs[status_res.MPI_SOURCE-2] != NULL);
+          assignment_indices[status_res.MPI_SOURCE-2] = next_work_node->index;
+          assert(assignment_indices[status_res.MPI_SOURCE-2] != -1);
           assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
           // send updated array of times to supervisor
-          DEBUG_PRINT(("About to F_Send!"));
-          //F_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD, rank);      
           MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
           DEBUG_PRINT(("SENT TIME TO SUP"));
           next_work_node = next_work_node->next;
@@ -267,6 +267,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
           DEBUG_PRINT(("Worker %d is now idle, I ain't got shit for him to do", worker_number));
           assignment_time[worker_number] = 0.0;
           assignment_ptrs[worker_number] = NULL;
+          assignment_indices[worker_number] = -1;
           assert(!are_you_down[worker_number]);
           MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
         }

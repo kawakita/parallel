@@ -6,8 +6,16 @@ LinkedList * new_linkedlist_node()
 	LinkedList * new_node = malloc(sizeof(LinkedList));
 	new_node->next = NULL;
         new_node->index = -1;
-	new_node->data = NULL;
 	return new_node;
+}
+
+void addNode(LinkedList * cur_node, int index)
+{
+  assert (cur_node->next == NULL);
+  LinkedList * new_node = new_linkedlist_node();
+  new_node->index = index;
+  assert (new_node->next == NULL);
+  cur_node->next = new_node;
 }
 
 /* array must be null terminated */
@@ -17,14 +25,15 @@ LinkedList * listFromArray(mw_work_t ** array)
 	
 	LinkedList * head = new_linkedlist_node();
 	mw_work_t ** array_iterator = array;
-	head->data = *array_iterator;
-	array_iterator++;
+        int count = 0;
+        head->index = count;
+        count++;
 	LinkedList * current_node = head;
 	while(*array_iterator != NULL)
 	{
 		LinkedList * next_node = new_linkedlist_node();
+                next_node->index = count;
         assert(next_node->next == NULL);
-		next_node->data = *array_iterator;
 		array_iterator++;
 		current_node->next = next_node;
 		current_node = current_node->next;
@@ -58,6 +67,6 @@ void move_node_to_end(LinkedList * node)
 		end = end->next;
 	}
     LinkedList * new_end_node = new_linkedlist_node();
-    new_end_node->data = node->data;
+    new_end_node->index = node->index;
 	end->next = new_end_node;
 }

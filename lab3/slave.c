@@ -52,7 +52,7 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
   while(1)
   {
     // recv unit of work from master
-    MPI_Recv(&work, f->work_sz, MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&work, f->work_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     if(status.MPI_TAG == KILL_TAG)
     {
       return;
@@ -64,6 +64,7 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
     //DEBUG_PRINT(("Result computed!"));
     // send unit of work to master with probability p
     F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD, rank);
+    // F_Send(computedResult, f->res_sz, MPI_CHAR, 1, WORK_TAG, MPI_COMM_WORLD, rank);
     //DEBUG_PRINT(("result sent"));
 
     // send ping after unit of work is possibly sent

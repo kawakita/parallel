@@ -7,6 +7,16 @@
 
 #define DEBUG 1
 
+/*int get_total_units(mw_work_t ** work_list)
+{
+  mw_work_t ** work_unit_counter = work_list;
+
+  while(*work_unit_counter != NULL)
+    work_unit_counter++;
+  
+  return work_unit_counter - work_list;
+}*/
+
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
   
@@ -26,7 +36,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   // determine how long each worker took
   double * complete_time = malloc(sizeof(double)*number_of_slaves);
   // booleans for failure
-  int * failed_worker = calloc(sizeof(int), number_of_slaves);
+  int * failed_worker = malloc(sizeof(int)*number_of_slaves);
 
   double master_threshold = 2; //give a lot of time to create work
   double last_master_ping = MPI_Wtime();
@@ -119,32 +129,34 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
       LinkedList * work_num_list;
       mw_work_t ** work_list_array;
       work_list_array = f->create(argc, argv);
-      int num_work_units = get_total_units(work_list);
-      mw_result_t * received_results =  malloc(f->res_sz * num_work_units);
+      int num_work_units = get_total_units(work_list_array);
+      mw_result_t ** received_results = calloc(num_work_units, f->res_sz);
 
       char *infile = "recovery.txt";
-      FILE *f = fopen(infile,"r");
-      if (f == NULL) //master hasnt received any results
-      {
-        //TODO create work 
-      }
-      else
+      FILE *file = fopen(infile,"r");
+      if (file != NULL) //there are results to process
       {
         int result_index;
         char result[1000];
 
-        while(fscanf(f, "%d %s", &result_index, result) != EOF)
+        while(fscanf(file, "%d %s", &result_index, result) != EOF)
         {
           printf("%d %s\n", result_index, result);          
           received_results[result_index] = f->str_to_result(result);
         }
       }
-      //TODO figure out what work still needs to be done
-      work_list = listFromArray(work_list_array);
+      //figure out what work still needs to be done
+      
+      for(i=0; i<num_work_units; i++) {
+        if (received_results[i] == NULL) {
+          addNode(work_num_list, i);
+        }
+      }
+      DEBUG_PRINT(("supervisor has a todo list.\n"));
       supervisor_took_over=1;
       return;
     }
-
+    
     int found_change = 0;
     //check for differences in working slaves
     for(i=0; i<number_of_slaves; i++) 

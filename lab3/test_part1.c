@@ -41,18 +41,18 @@ mw_result_t * do_work(mw_work_t * work)
 
 char * result_to_str(mw_result_t result)
 {
-  char s[32];
+  char* s = malloc(1000);
   double d = result.k;
 
   sprintf(s, "%f", d);
   return s;
 }
 
-mw_result_t str_to_result(char * s)
+mw_result_t* str_to_result(char * s)
 {
   double d = atof(s);
-  mw_result_t result;
-  result.k = d;
+  mw_result_t* result = malloc(sizeof(mw_result_t));
+  result->k = d;
   return result;
 }
 
