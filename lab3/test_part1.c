@@ -41,6 +41,24 @@ mw_result_t * do_work(mw_work_t * work)
   return result;
 }
 
+char * result_to_str(mw_result_t result)
+{
+  char s[32];
+  double d = result.k;
+
+  sprintf(s, "%f", d);
+  return s;
+}
+
+mw_result_t str_to_result(char * s)
+{
+  double d = atof(s);
+  mw_result_t result;
+  result.k = d;
+  return result;
+}
+
+
 int main (int argc, char **argv)
 {
   DEBUG_PRINT(("starting :)"));
