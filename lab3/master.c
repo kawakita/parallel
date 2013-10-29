@@ -229,9 +229,10 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
         DEBUG_PRINT(("worker_number %d", worker_number));
         int index = assignment_indices[worker_number];
         DEBUG_PRINT(("index %d", index));
-        char *s = f->result_to_str(received_results[num_results_received]);
-        DEBUG_PRINT(("str %d %s", index, s));
-        fprintf(fptr, "%d %s\n", index, s);
+        //char *s = f->result_to_str(received_results[num_results_received]);
+        //DEBUG_PRINT(("str %d %s", index, s));
+        //fprintf(fptr, "%d %s\n", index, s);
+        fprintf(fptr, "%d %d\n", index, worker_number);
         fclose(fptr);
 
         // update number of results received
