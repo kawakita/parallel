@@ -1,7 +1,6 @@
 #ifndef __MW_API_H__
 #define __MW_API_H__
 
-#define NDEBUG
 #include <stdio.h>
 #include <mpi.h>
 #include <stdlib.h>
