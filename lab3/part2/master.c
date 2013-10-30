@@ -109,6 +109,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   // send time array to supervisor
   DEBUG_PRINT(("Sending supervisor first time update"));
+  //F_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD, rank);
   MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
 
   // failure id
@@ -218,7 +219,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
         char * str = f->to_str(received_results[num_results_received]);
         fptr = fopen("recovery.txt", "a");
-        fprintf(fptr, "%d|%s\n", assignment_indices[worker_number], str);
+        fprintf(fptr, "%d %s\n", assignment_indices[worker_number], str);
         fclose(fptr);
 
         // update number of results received

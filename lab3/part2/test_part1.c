@@ -253,15 +253,34 @@ char * result_to_str(mw_result_t result)
   }
   return s;
 }
-/*
-mw_result_t str_to_result(char * s)
+
+mw_result_t* str_to_result(char * s)
 {
-  double d = atof(s);
-  mw_result_t result;
-  result.k = d;
+  mw_result_t* result = malloc(sizeof(mw_result_t));
+  int i = 0, num_commas = 0;
+  if (s[0] == '\0')
+  {  
+    strcpy(result->nums,s);
+    result->n = 0;
+  }
+  else
+  {
+    while(s[i] != '\0')
+    {
+      if (s[i] == ',')
+      {
+        s[i] = '\0';
+        num_commas++;
+      }
+      i++;
+    }
+    strcpy(result->nums,s);
+    result->n = num_commas + 1;
+  }
+
   return result;
 }
-*/
+
 
 int main (int argc, char **argv)
 {
@@ -271,7 +290,7 @@ int main (int argc, char **argv)
   if (argc != 2)
   {
     printf("Invalid input. Provide the granularity, number of elements per unit of work.\n");
-    return;
+    return -1;
   }
 
   MPI_Init (&argc, &argv);
@@ -280,6 +299,7 @@ int main (int argc, char **argv)
   f.result = process_results;
   f.compute = do_work;
   f.to_str = result_to_str;
+  f.from_str = str_to_result;
   f.work_sz = sizeof(struct userdef_work_t);
   f.res_sz = sizeof(struct userdef_result_t);
 

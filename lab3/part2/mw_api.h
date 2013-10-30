@@ -29,7 +29,7 @@ struct mw_api_spec {
   char *(*to_str) (mw_result_t result);
   /* convert result into a string that can be stored on file */
 
-  //mw_result_t *(*str_to_result) (char * s);
+  mw_result_t* (*from_str) (char * s);
   /* convert string into a result that can be stored in the collection of results */
 };
 
