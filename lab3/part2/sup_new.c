@@ -40,16 +40,12 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   int master_fail = 0;
 
   DEBUG_PRINT(("We're here!"));
-  // supervisor does non-blocking receive to get list of workers and their start times
-  MPI_Irecv(assignment_time1, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request_started);
-
-  while(!flag_started && MPI_Wtime()<(last_master_ping+master_threshold))
+  // supervisor does blocking receive to get list of workers and their start times
+  MPI_Recv(assignment_time1, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request_started);
+  while(flag_started == 0 && MPI_Wtime()<(last_master_ping+master_threshold))
   {
     MPI_Test(&request_started, &flag_started, &status_started);
-    if(flag_started) {
-      last_master_ping = MPI_Wtime();
-      break;
-    }
+    if(flag_started) last_master_ping = MPI_Wtime();
   }
   // if we pass the threshold time consider master failed
   if(!flag_started) 
@@ -198,7 +194,7 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
   end_create = MPI_Wtime();
   DEBUG_PRINT(("created work in %f seconds!", end_create - start_create));
 
-  int num_work_units=0;
+  int slave=1, num_work_units=0;
 
   num_work_units = get_total_units(work_array);
 
@@ -226,16 +222,17 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
       // update num_results_received   
       num_results_received++;
     }
+    DEBUG_PRINT(("Finished loading file contents"));
   }
+
 
   // tell slaves to send to supervisor now
-  int slave;
-  for(slave=number_of_nonslaves; slave<(number_of_slaves+number_of_nonslaves); ++slave) {
-    int master_fail = 1;
-    DEBUG_PRINT(("Telling slave"));
+  int master_fail = 0;
+  for(slave=number_of_nonslaves; slave<(number_of_slaves+number_of_nonslaves); ++slave)
+  {
     MPI_Send(&master_fail, 1, MPI_INT, slave, M_FAIL_TAG, MPI_COMM_WORLD);
   }
-
+  return;
 /*
       //receive all initial messages
       for(i=0; i<num_work_units; i++) {

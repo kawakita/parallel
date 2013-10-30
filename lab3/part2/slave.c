@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#define DEBUG 0
+#define DEBUG 1
 
 // success probability
 static float p = 1.95;
@@ -19,7 +19,7 @@ int random_fail()
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank)
 {
-  if (rank ==0 || rank == 5 || random_fail()) {      
+  if (rank ==0 || random_fail()) {      
     DEBUG_PRINT(("%d FAIIIIILLLLLL!!!!!!", rank));
     MPI_Finalize();
     exit (0);
@@ -31,10 +31,6 @@ int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_C
 
 void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
 {
-  mw_work_t work;
-  mw_result_t * computedResult;
-  //int ping = 1;
-  MPI_Status status;
 
   // parse command line arg for success probability
   if (argc == 3)
@@ -49,24 +45,52 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
   DEBUG_PRINT(("Seeded srand with %u", (unsigned) time(NULL) + rank));
   srand((unsigned)time(NULL) + rank);
 
+  int master_fail = 0;
+  MPI_Request request_master_fail;
+  MPI_Status status_master_fail;
+  int flag_master_fail = 0;
+
+  mw_work_t work;
+  MPI_Request request_master, request_sup;
+  MPI_Status status_master, status_sup;
+  int flag_master = 0, flag_sup = 0;
+  mw_result_t * computedResult;
+
+  MPI_Irecv(&master_fail, 1, MPI_INT, 1, M_FAIL_TAG, MPI_COMM_WORLD, &request_master_fail);
+  MPI_Irecv(&work, f->work_sz, MPI_CHAR, 1, WORK_TAG, MPI_COMM_WORLD, &request_master);
+  MPI_Irecv(&work, f->work_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD, &request_sup);
+
   while(1)
   {
-    // recv unit of work from master
-    MPI_Recv(&work, f->work_sz, MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    if(status.MPI_TAG == KILL_TAG)
+    MPI_Test(&request_master_fail, &flag_master_fail, &status_master_fail);
+    // don't Irecv master_fail again because only need to recv once
+    MPI_Test(&request_master, &flag_master, &status_master);
+    MPI_Test(&request_sup, &flag_sup, &status_sup);
+
+    if (!flag_master_fail && flag_master)
     {
-      return;
+      DEBUG_PRINT(("NO SAW MASTER FAILURE"));
+
+      if(status_master.MPI_TAG == KILL_TAG)
+      {
+        return;
+      }
+
+      computedResult = f->compute(&work);
+
+      F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD, rank);
+      MPI_Irecv(&work, f->work_sz, MPI_CHAR, 1, WORK_TAG, MPI_COMM_WORLD, &request_master);
     }
+    else if (flag_master_fail && flag_sup) {
 
-    // check for kill signal for non-blocking recv
-    computedResult = f->compute(&work);
+      if(status_sup.MPI_TAG == KILL_TAG)
+      {
+        return;
+      }
 
-    //DEBUG_PRINT(("Result computed!"));
-    // send unit of work to master with probability p
-    F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD, rank);
-    //DEBUG_PRINT(("result sent"));
-
-    // send ping after unit of work is possibly sent
-    //MPI_Send(&ping, 1, MPI_INT, 1, WORK_SUP_TAG, MPI_COMM_WORLD);
+      computedResult = f->compute(&work);
+      F_Send(computedResult, f->res_sz, MPI_CHAR, 1, WORK_TAG, MPI_COMM_WORLD, rank);
+      MPI_Irecv(&work, f->work_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD, &request_sup);
+    }      
   }
 }

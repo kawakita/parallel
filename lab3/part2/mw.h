@@ -13,6 +13,6 @@ void be_a_slave(int argc, char ** argv, struct mw_api_spec *f);
 
 int get_total_units(mw_work_t ** work_list);
 
-enum { WORK_TAG, KILL_TAG, M_PING_TAG, FAIL_TAG, SUPERVISOR_TAG };
+enum { WORK_TAG, KILL_TAG, M_PING_TAG, FAIL_TAG, M_FAIL_TAG, SUPERVISOR_TAG };
 
 #endif
