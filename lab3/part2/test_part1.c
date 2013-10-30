@@ -7,7 +7,7 @@
 #include <assert.h>
 
 //#define LARGE_NUM "68719476736"
-#define LARGE_NUM "10000"
+#define LARGE_NUM "100"
 
 char* mpz_to_buffer(char* buf, mpz_t* nums, unsigned int n)
 {
@@ -226,16 +226,29 @@ mw_result_t * do_work(mw_work_t * work)
   }
   return result;
 }
-/*
+
 char * result_to_str(mw_result_t result)
 {
-  char s[32];
-  double d = result.k;
+  char * s = malloc(sizeof(char)*1000);
+  memcpy(s, result.nums, 1000);
 
-  sprintf(s, "%f", d);
+  // only replace commas for number of results-1 to maintain null terminus
+  int i = 0, num_null = 0;
+  while(num_null < (result.n-1))
+  {
+    if(s[i] == '\0')
+    {
+      s[i] = ',';
+      num_null++;
+    }
+    i++;
+  }
+  // if no results, make it begin with null
+  if (result.n == 0)
+    s[i] = '\0';
   return s;
 }
-
+/*
 mw_result_t str_to_result(char * s)
 {
   double d = atof(s);
@@ -261,6 +274,7 @@ int main (int argc, char **argv)
   f.create = create_work;
   f.result = process_results;
   f.compute = do_work;
+  f.to_str = result_to_str;
   f.work_sz = sizeof(struct userdef_work_t);
   f.res_sz = sizeof(struct userdef_result_t);
 

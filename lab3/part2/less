@@ -1,0 +1,163 @@
+12,13d11
+< #define DEBUG 0
+< 
+16d13
+<   DEBUG_PRINT(("master starting"));
+18c15
+<   int number_of_nonslaves = 2;
+---
+>   DEBUG_PRINT(("master starting"));
+21,22d17
+<   MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
+<   number_of_slaves = number_of_slaves - number_of_nonslaves;
+24,28c19
+<   // needed for F_Send
+<   int rank;
+<   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+<   DEBUG_PRINT(("Seeded srand with %u", (unsigned) time(NULL) + rank));
+<   srand((unsigned)time(NULL) + rank);
+---
+>   MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
+38,40c29
+<   // save work_array separately so we can find index later on
+<   mw_work_t ** work_array = f->create(argc, argv);
+<   work_list = listFromArray(work_array);
+---
+>   work_list = listFromArray(f->create(argc, argv));
+46c35
+<   num_work_units = get_total_units(work_array);
+---
+>   num_work_units = list_length(work_list);
+48c37
+<   mw_result_t * received_results = malloc(f->res_sz * num_work_units);
+---
+>   mw_result_t * received_results =  malloc(f->res_sz * num_work_units);
+52c41
+<     exit(0);
+---
+> 	exit(0);
+58c47,51
+<   LinkedList* assignment_ptrs[number_of_slaves];
+---
+>   LinkedList* assignment_ptrs[number_of_slaves-2];
+> 
+>   // make array of binary indicators for inactive workers
+>   // initially all workers are active and 0
+>   //unsigned int inactive_workers[number_of_slaves-2];
+61c54
+<   double assignment_time[number_of_slaves];
+---
+>   double assignment_time[number_of_slaves-2];
+63,64c56
+<   // create array indicating if slaves are down
+<   int are_you_down[number_of_slaves];
+---
+>   int are_you_down[number_of_slaves-2];
+71,72c63,64
+<   // have supervisor so starting at number_of_nonslaves
+<   for(slave=number_of_nonslaves; slave<(number_of_slaves+number_of_nonslaves); ++slave)
+---
+>   // have supervisor so starting at 2
+>   for(slave=2; slave<number_of_slaves; ++slave)
+74c66
+<     are_you_down[slave-number_of_nonslaves] = 0; //slaves are all working in the beginning
+---
+>     are_you_down[slave-2] = 0; //slaves are all working in the beginning
+88,89c80,81
+<     assignment_ptrs[slave-number_of_nonslaves] = next_work_node;
+<     assert(assignment_ptrs[slave-number_of_nonslaves] != NULL);
+---
+>     assignment_ptrs[slave-2] = next_work_node;
+>     assert(assignment_ptrs[slave-2] != NULL);
+92c84
+<     assignment_time[slave-number_of_nonslaves] = MPI_Wtime();
+---
+>     assignment_time[slave-2] = MPI_Wtime();
+106c98
+<   MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+---
+>   MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+109c101
+<   int failure_id, kill_signal;
+---
+>   int failure_id;
+111,113c103,105
+<   MPI_Status status_fail, status_res, status_kill;
+<   MPI_Request request_fail, request_res, request_kill;
+<   int flag_fail = 0, flag_res = 0, flag_kill = 0;
+---
+>   MPI_Status status_fail, status_res;
+>   MPI_Request request_fail, request_res;
+>   int flag_fail = 0, flag_res = 0;
+121,125d112
+<   // receive kill from supervisor as non-blocking recv
+<   MPI_Irecv(&kill_signal, 1, MPI_INT, 1, KILL_TAG, MPI_COMM_WORLD, &request_kill);
+< 
+<   int ping_sup = 0;
+< 
+129,132c116
+<     // send ping to supervisor
+<     MPI_Send(&ping_sup, 1, MPI_INT, 1, M_PING_TAG, MPI_COMM_WORLD);
+< 
+<     // check for flag_fail
+---
+>     // check for flag_fail again
+135c119
+<     // check for flag_res
+---
+>     // check for flag_res again
+137,139d120
+< 
+<     // check for flag_kill
+<     MPI_Test(&request_kill, &flag_kill, &status_kill);
+143a125,126
+>         // change inactive workers array
+>         //inactive_workers[status_fail.MPI_SOURCE-2] = 1;
+170c153
+<         MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+---
+>         MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+177c160
+<     for(i=0; i<number_of_slaves; ++i)
+---
+>     for(i=0; i<number_of_slaves-2; ++i)
+188c171
+<         send_to_slave(next_work_node->data, f->work_sz, MPI_CHAR, idle_process+number_of_nonslaves, WORK_TAG, MPI_COMM_WORLD);
+---
+>         send_to_slave(next_work_node->data, f->work_sz, MPI_CHAR, idle_process+2, WORK_TAG, MPI_COMM_WORLD);
+191c174
+<         MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+---
+>         MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+202c185
+<       int worker_number = status_res.MPI_SOURCE-number_of_nonslaves;
+---
+>       int worker_number = status_res.MPI_SOURCE-2;
+229,231c212,214
+<           assignment_ptrs[status_res.MPI_SOURCE-number_of_nonslaves] = next_work_node;
+<           assert(assignment_ptrs[status_res.MPI_SOURCE-number_of_nonslaves] != NULL);
+<           assignment_time[status_res.MPI_SOURCE-number_of_nonslaves] = MPI_Wtime();
+---
+>           assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
+>           assert(assignment_ptrs[status_res.MPI_SOURCE-2] != NULL);
+>           assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
+233c216
+<           MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+---
+>           MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+247c230
+<             MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+---
+>             MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+253,257d235
+< 
+<     if (flag_kill)
+<     {
+<       return;
+<     }
+261c239
+<   for(slave=1; slave<number_of_slaves+number_of_nonslaves; ++slave)
+---
+>   for(slave=1; slave<number_of_slaves; ++slave)
+276d253
+< 

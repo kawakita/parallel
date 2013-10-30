@@ -19,7 +19,7 @@ int random_fail()
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank)
 {
-  if (rank == 0 || rank == 5 || random_fail()) {      
+  if (rank ==0 || rank == 5 || random_fail()) {      
     DEBUG_PRINT(("%d FAIIIIILLLLLL!!!!!!", rank));
     MPI_Finalize();
     exit (0);
@@ -31,12 +31,10 @@ int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_C
 
 void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
 {
-  int work_size = f->work_sz;
   mw_work_t work;
   mw_result_t * computedResult;
   //int ping = 1;
   MPI_Status status;
-  MPI_Request request;
 
   // parse command line arg for success probability
   if (argc == 3)
@@ -45,39 +43,30 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
     if (temp > .0 && temp < 1.)
       p = temp;
   }
-  
-  int master_id = 0;
+
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   DEBUG_PRINT(("Seeded srand with %u", (unsigned) time(NULL) + rank));
-  srand((unsigned)time(NULL) + rank);  
-   
+  srand((unsigned)time(NULL) + rank);
+
   while(1)
   {
-    // wait for some sort of message
-    MPI_Recv(&work, work_size, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    if(status.MPI_SOURCE == 1 && status.MPI_TAG == NEW_MASTER_TAG)
-    {
-      master_id = 2;
-    }
-    
-    else if(status.MPI_TAG == KILL_TAG && status.MPI_SOURCE == master_id)
+    // recv unit of work from master
+    MPI_Recv(&work, f->work_sz, MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    if(status.MPI_TAG == KILL_TAG)
     {
       return;
     }
-    
-    else if(status.MPI_SOURCE == master_id && status.MPI_TAG == WORK_TAG)
-    {
 
-      // check for kill signal for non-blocking recv
-      computedResult = f->compute(&work);
+    // check for kill signal for non-blocking recv
+    computedResult = f->compute(&work);
 
-      //DEBUG_PRINT(("Result computed!"));
-      // send unit of work to master with probability p
-      F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD, rank);
-      F_Send(computedResult, f->res_sz, MPI_CHAR, 2, WORK_TAG, MPI_COMM_WORLD, rank);
+    //DEBUG_PRINT(("Result computed!"));
+    // send unit of work to master with probability p
+    F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD, rank);
+    //DEBUG_PRINT(("result sent"));
 
-    }
-
+    // send ping after unit of work is possibly sent
+    //MPI_Send(&ping, 1, MPI_INT, 1, WORK_SUP_TAG, MPI_COMM_WORLD);
   }
 }

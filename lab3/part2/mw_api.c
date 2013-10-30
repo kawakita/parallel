@@ -17,10 +17,6 @@ void MW_Run(int argc, char **argv, struct mw_api_spec *f)
   {
     do_supervisor_stuff(argc, argv, f);
   }
-  else if(2 == myid)
-  {
-    do_backupmaster_stuff(argc, argv, f);
-  }
   else
   {
     be_a_slave(argc, argv, f);

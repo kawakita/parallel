@@ -23,7 +23,7 @@ $(PART1_EXEC): $(PART1_OBJECTS)
 	$(CC) $(PART1_OBJECTS) -o $(PART1_EXEC) -lgmp
 
 run_part1: $(PART1_SOURCES) $(PART1_EXEC)
-	$(RUN) $(HOSTS) -n $(n) $(PART1_EXEC) 10
+	$(RUN) $(HOSTS) -n $(n) $(PART1_EXEC) 100
 
 .c.o:
 	$(CC) $(INCLUDE) -DDEBUG=$(DEBUG) $(CFLAGS) -c $< -o $@
