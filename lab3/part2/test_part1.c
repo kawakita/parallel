@@ -232,24 +232,25 @@ char * result_to_str(mw_result_t result)
   char * s = malloc(sizeof(char)*1000);
   memcpy(s, result.nums, 1000);
 
-  // only replace commas for number of results-1 to maintain null terminus
-  int i = 0, num_null = 0;
-  while(num_null < (result.n-1))
-  {
-    if(s[i] == '\0')
-    {
-      s[i] = ',';
-      num_null++;
-    }
-    printf("%d\n", i);
-    i++;
-  }
   // if no results, make it begin with null
   if (result.n == 0)
   {
     s[0] = '\0';
-    printf("%d\n", 0);
   }  
+  else
+  {
+    // only replace commas for number of results-1 to maintain null terminus
+    int i = 0, num_null = 0;
+    while(num_null < (result.n-1))
+    {
+      if(s[i] == '\0')
+      {
+        s[i] = ',';
+        num_null++;
+      }
+      i++;
+    }
+  }
   return s;
 }
 /*
