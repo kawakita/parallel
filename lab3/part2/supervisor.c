@@ -4,7 +4,7 @@
 
 #include "mw.h"
 #include "def_structs.h"
-#includw "linked_list.h"
+#include "linked_list.h"
 
 #define DEBUG 1
 
@@ -41,7 +41,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   DEBUG_PRINT(("We're here!"));
   // supervisor does blocking receive to get list of workers and their start times
-  MPI_Recv(assignment_time1, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &status_started);
+  MPI_Recv(assignment_time1, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request_started);
   while(flag_started == 0 && MPI_Wtime()<(last_master_ping+master_threshold))
   {
     MPI_Test(&request_started, &flag_started, &status_started);
@@ -223,6 +223,7 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
       // update num_results_received   
       num_results_received++;
     }
+    DEBUG_PRINT(("Finished loading file contents"));
   }
 
   // tell slaves to send to supervisor now
