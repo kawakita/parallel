@@ -8,7 +8,7 @@
 #define DEBUG 0
 
 // success probability
-static float p = 1.95;
+static float p = 1.0;
 
 // implement random_fail()
 int random_fail()
@@ -19,7 +19,7 @@ int random_fail()
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank)
 {
-  if (rank ==0 || rank == 5 || random_fail()) {      
+  if (/*rank ==0 || rank == 5 || */random_fail()) {      
     DEBUG_PRINT(("%d FAIIIIILLLLLL!!!!!!", rank));
     MPI_Finalize();
     exit (0);
