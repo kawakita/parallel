@@ -4,14 +4,16 @@
 
 #include "mw.h"
 #include "def_structs.h"
-#include "linked_list.h"
+#includw "linked_list.h"
 
 #define DEBUG 1
+
+void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f);
 
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
   
-  //DEBUG_PRINT(("supervisor starting"));
+  DEBUG_PRINT(("supervisor starting"));
   
   int number_of_slaves;
   MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
@@ -24,13 +26,8 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   double * assignment_time1 = malloc(sizeof(double)*number_of_slaves);
   double * assignment_time2 = malloc(sizeof(double)*number_of_slaves);
 
-  // determine how long each worker took
-  double * complete_time = malloc(sizeof(double)*number_of_slaves);
-  // booleans for failure
-  int * failed_worker = calloc(sizeof(int), number_of_slaves);
-
   /** accomodating master failure **/
-/*  double master_threshold = 1; //give a lot of time to create work
+  double master_threshold = 1; //give a lot of time to create work
   double last_master_ping = MPI_Wtime();
   
   // supervisor does nonblocking receive for first set of assignment times
@@ -45,7 +42,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   DEBUG_PRINT(("We're here!"));
   // supervisor does blocking receive to get list of workers and their start times
   MPI_Recv(assignment_time1, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &status_started);
-  while(!flag_started && MPI_Wtime()<last_master_ping+master_threshold) 
+  while(flag_started == 0 && MPI_Wtime()<(last_master_ping+master_threshold))
   {
     MPI_Test(&request_started, &flag_started, &status_started);
     if(flag_started) last_master_ping = MPI_Wtime();
@@ -57,8 +54,17 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     master_fail = 1;
     do_supervisor_as_master_stuff(argc, argv, f);
   }
-*/  
   /** end accomodating master failure **/
+
+
+  // determine how long each worker took
+  double * complete_time = malloc(sizeof(double)*number_of_slaves);
+  // booleans for failure
+  int * failed_worker = calloc(sizeof(int), number_of_slaves);
+
+  // supervisor does blocking receive to get list of workers and their start times
+  MPI_Recv(assignment_time1, number_of_slaves, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+  //assignment_time2 = assignment_time1;
 
   // calc approximate time diff between sup and master
   double master_time = assignment_time1[number_of_slaves-1];
@@ -117,9 +123,9 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
         //worker is currently idle, not dead
         if(assignment_time1[i] != 0.0)
         {
-            DEBUG_PRINT(("Just found out %d is idle", i));
-            assignment_time1[i] = 0.0;
-            found_change = 1;
+          DEBUG_PRINT(("Just found out %d is idle", i));
+          assignment_time1[i] = 0.0;
+          found_change = 1;
         }
         continue;
       }
@@ -158,12 +164,11 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     {
       if(found_change == 0)
       {
-          DEBUG_PRINT(("Received an update without any change :("));
+        DEBUG_PRINT(("Received an update without any change :("));
       }
       MPI_Irecv(assignment_time2, number_of_slaves, MPI_DOUBLE, 0, SUPERVISOR_TAG, MPI_COMM_WORLD, &request2);
     } 
   }
-
 }
 
 void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
@@ -229,8 +234,6 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
         //MPI_Irecv(received_results[i], f->res_sz, MPI_CHAR, WORK_TAG, MPI_COMM_WORLD, &slave_request);
       }
 
-*/
-/*
   // make array keeping track of pointers for work that's active
   LinkedList* assignment_ptrs[number_of_slaves];
 
@@ -245,8 +248,8 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
 
   // current pointer
   LinkedList
-    * next_work_node = work_list,
-    * list_end = NULL;
+  * next_work_node = work_list,
+  * list_end = NULL;
 
   // have supervisor so starting at number_of_nonslaves
   for(slave=number_of_nonslaves; slave<(number_of_slaves+number_of_nonslaves); ++slave)

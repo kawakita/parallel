@@ -7,7 +7,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f);
 
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f);
 
-void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f);
+//void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f);
 
 void be_a_slave(int argc, char ** argv, struct mw_api_spec *f);
 
