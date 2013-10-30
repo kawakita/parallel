@@ -108,8 +108,8 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   // send time array to supervisor
   DEBUG_PRINT(("Sending supervisor first time update"));
-  //MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-  F_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD, rank);
+  MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+  //F_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD, rank);
 
   // failure id
   int failure_id;

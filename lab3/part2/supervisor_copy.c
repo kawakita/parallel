@@ -216,7 +216,7 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
     char str[1000];
     while(fscanf(file, "%d %s", &result_index, str) != EOF)
     {
-      //printf("%d %s\n", result_index, str);          
+      printf("%d %s\n", result_index, str);          
       // update received results  
       mw_result_t * result = f->from_str(str);
       received_results[result_index] = *result;
@@ -228,11 +228,11 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
   // tell slaves to send to supervisor now
   int slave;
   for(slave=number_of_nonslaves; slave<(number_of_slaves+number_of_nonslaves); ++slave) {
+    int master_fail = 1;
     DEBUG_PRINT(("Telling slave"));
-    MPI_Send(0, 0, MPI_CHAR, slave, M_FAIL_TAG, MPI_COMM_WORLD);
+    MPI_Send(&master_fail, 1, MPI_INT, slave, M_FAIL_TAG, MPI_COMM_WORLD);
   }
 
-  return;
 /*
       //receive all initial messages
       for(i=0; i<num_work_units; i++) {

@@ -232,7 +232,7 @@ char * result_to_str(mw_result_t result)
   char * s = malloc(sizeof(char)*1000);
   memcpy(s, result.nums, 1000);
 
-  // if no results, make it begin with null
+  // if no results, make it begin with dash
   if (result.n == 0)
   {
     s[0] = '0';
