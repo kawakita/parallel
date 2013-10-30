@@ -218,7 +218,7 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
         char * str = f->to_str(received_results[num_results_received]);
         fptr = fopen("recovery.txt", "a");
-        fprintf(fptr, "%d|%s\n", assignment_indices[worker_number], str);
+        fprintf(fptr, "%d %s\n", assignment_indices[worker_number], str);
         fclose(fptr);
 
         // update number of results received
