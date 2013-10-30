@@ -235,7 +235,8 @@ char * result_to_str(mw_result_t result)
   // if no results, make it begin with null
   if (result.n == 0)
   {
-    s[0] = '\0';
+    s[0] = '0';
+    s[1] = '\0';
   }  
   else
   {
@@ -258,7 +259,7 @@ mw_result_t* str_to_result(char * s)
 {
   mw_result_t* result = malloc(sizeof(mw_result_t));
   int i = 0, num_commas = 0;
-  if (s[0] == '\0')
+  if (s[0] == '0')
   {  
     strcpy(result->nums,s);
     result->n = 0;
@@ -278,6 +279,7 @@ mw_result_t* str_to_result(char * s)
     result->n = num_commas + 1;
   }
 
+  DEBUG_PRINT(("Returning result %s", result->nums));
   return result;
 }
 
