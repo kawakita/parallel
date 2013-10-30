@@ -6,8 +6,8 @@
 #include <string.h>
 #include <assert.h>
 
-//#define LARGE_NUM "68719476736"
-#define LARGE_NUM "100"
+#define LARGE_NUM "68719476736"
+//#define LARGE_NUM "100"
 
 char* mpz_to_buffer(char* buf, mpz_t* nums, unsigned int n)
 {
@@ -241,11 +241,15 @@ char * result_to_str(mw_result_t result)
       s[i] = ',';
       num_null++;
     }
+    printf("%d\n", i);
     i++;
   }
   // if no results, make it begin with null
   if (result.n == 0)
-    s[i] = '\0';
+  {
+    s[0] = '\0';
+    printf("%d\n", 0);
+  }  
   return s;
 }
 /*
