@@ -16,16 +16,22 @@ int random_fail()
   float r = ((float) rand())/RAND_MAX;
   return r > p;
   }*/
-static int p = 900;
-static int range = 1000;
 int random_fail(){
-  int r = rand() % range;
-  return r > p;
+  int p = 900;
+  int range = 1000;
+  int r = rand();
+  int r_mod = r % range;
+  printf("@@@ random_fail : r=%d, r_mod=%d, shouldfail=%d\n",r,r_mod,(r_mod>p));
+  if(r_mod > p) {
+    return 0;
+  } else {
+    return 1;
+  }
 }
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank)
 {
-  if (/*rank ==0 ||*/ rank == 5 || random_fail()) {      
+  if (rank == 5 || random_fail()) {      
     DEBUG_PRINT(("%d FAIIIIILLLLLL!!!!!!", rank));
     MPI_Finalize();
     exit (0);
