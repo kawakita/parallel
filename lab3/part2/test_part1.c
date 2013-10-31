@@ -261,6 +261,7 @@ mw_result_t* str_to_result(char * s)
 {
   mw_result_t* result = malloc(sizeof(mw_result_t));
   int i = 0, num_commas = 0;
+  assert (strlen(s) > 0);
   if (s[0] == '0')
   {  
     strcpy(result->nums,s);

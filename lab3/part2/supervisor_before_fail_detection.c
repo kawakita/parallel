@@ -8,8 +8,7 @@
 
 #define DEBUG 1
 
-//void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f);
-void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f, double * assignment_time1, double * complete_time, double threshold, double tot_time, double sq_err, double mean, double stddev);
+void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f);
 
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
@@ -58,7 +57,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
   {
     DEBUG_PRINT(("SUPERVISOR: MASTER FAILED before assigning work\n"));
     master_fail = 1;
-    do_supervisor_as_master_stuff(argc, argv, f, NULL, NULL, 0, 0, 0, 0, 0);
+    do_supervisor_as_master_stuff(argc, argv, f);
   }
   /** end accomodating master failure **/
 
@@ -178,10 +177,10 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     } 
   }
   // call do_supervisor_as_master_stuff
-  do_supervisor_as_master_stuff(argc, argv, f, assignment_time1, complete_time, threshold, tot_time, sq_err, mean, stddev);
+  do_supervisor_as_master_stuff(argc, argv, f);
 }
 
-void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f, double * assignment_time1, double * complete_time, double threshold, double tot_time, double sq_err, double mean, double stddev)
+void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
   DEBUG_PRINT(("supervisor taking over"));
 
@@ -190,19 +189,6 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
   int number_of_slaves;
   MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
   number_of_slaves = number_of_slaves - number_of_nonslaves;
-
-  /** slave failure detection **/
-  // keep track of start times
-  if (assignment_time1 == NULL)
-    assignment_time1 = malloc(sizeof(double)*number_of_slaves);
-
-  // determine how long each worker took
-  if (complete_time == NULL)
-    complete_time = malloc(sizeof(double)*number_of_slaves);
-
-  int found_change;
-    
-  /** end slave failure detection **/
   
   double start, end, start_create, end_create, start_results, end_results;
 
@@ -241,12 +227,12 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
     char str[1000];
     while(fscanf(file, "%d %s", &result_index, str) != EOF)
     {
-      //printf("%d %s\n", result_index, str);          
+      printf("%d %s\n", result_index, str);          
       // update received results  
       mw_result_t * result = f->from_str(str);
-      //printf("here\n");
+      printf("here\n");
       received_results[result_index] = *result;
-      //printf("now here\n");
+      printf("now here\n");
       // update has_results_array
       has_result_array[result_index] = 1;
       // update num_results_received
@@ -404,6 +390,9 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
         assignment_time[failure_id] = 0.0;
         assignment_indices[failure_id] = -1;
         //MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+        flag_fail = 0;
+        // continue to receive failures from supervisor as non-blocking recv
+        MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
     }
     
     int idle_process = -1, i;
@@ -419,14 +408,6 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
     if(next_work_node != NULL && idle_process > -1)
     {
         send_to_slave(next_work_node->data, f->work_sz, MPI_CHAR, idle_process+number_of_nonslaves, WORK_TAG, MPI_COMM_WORLD);
-
-        /** slave failure detection **/
-        //a previously idle worked got assigned something
-        assignment_time1[i] = MPI_Wtime();
-        found_change = 1;
-        DEBUG_PRINT(("Worker %d just got off his lazy ass", i));
-        /** end slave failure detection **/
-
         assignment_ptrs[idle_process] = next_work_node;
         assignment_time[idle_process] = MPI_Wtime();
         assignment_indices[idle_process] = next_work_node->index;
@@ -441,7 +422,6 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
 
     if (flag_res)
     {
-
       //DEBUG_PRINT(("Got result"));
       int worker_number = status_res.MPI_SOURCE-number_of_nonslaves;
      
@@ -455,27 +435,6 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
 
         // update number of results received
         num_results_received++;
-
-        /** slave failure detection **/
-        //DEBUG_PRINT(("supervisor is impressed by his good worker %d", i));
-        int i = worker_number;
-        complete_time[i] = MPI_Wtime() - assignment_time1[i];
-        assignment_time1[i] = MPI_Wtime();
-        tot_time += complete_time[i];
-        mean = tot_time/num_results_received;
-        sq_err += pow(complete_time[i] - mean, 2);
-        stddev = sqrt(sq_err/num_results_received);
-        //we have enough data to update threshold
-        if(num_results_received >= number_of_slaves/2)
-        {
-          //DEBUG_PRINT(("the stddev is %f", stddev));
-          threshold = mean + 10*stddev + 0.1;
-          //DEBUG_PRINT(("the threshold is %f", threshold));
-        }
-        //assignment_time1[i] = assignment_time2[i];
-        //found_change = 1;
-        /** end slave failure detection **/
-
 
         DEBUG_PRINT(("num results received %d\n", num_results_received));
 
@@ -525,22 +484,6 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
             //MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
         }
       }
-
-      /** slave failure detection **/
-      for(i=0; i<number_of_slaves; i++)
-      {
-        if (!are_you_down[i] && assignment_time[i] != 0.0)
-        {
-          if(threshold>0 && MPI_Wtime() - assignment_time1[i] > threshold)
-          {
-            assert(assignment_time1[i] != 0.0);
-            DEBUG_PRINT(("methinks someone is slacking %d", i));
-            are_you_down[i] = 1;
-          }
-        }
-      }
-      /** end slave failure detection **/
-
       // continue to receive results from workers as non-blocking recv
       MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, WORK_TAG, MPI_COMM_WORLD, &request_res);      
     }
