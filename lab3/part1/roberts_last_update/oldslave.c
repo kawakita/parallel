@@ -6,26 +6,20 @@
 #include <limits.h>
 
 #define DEBUG 1
-/*
+
 // success probability
-static float p = 1;
+static float p = 0.95;
 
 // implement random_fail()
 int random_fail()
 {
   float r = ((float) rand())/RAND_MAX;
   return r > p;
-  }*/
-static int p = 900;
-static int range = 1000;
-int random_fail(){
-  int r = rand() % range;
-  return r > p;
 }
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank)
 {
-  if (/*rank ==0 ||*/ rank == 5 || random_fail()) {      
+  if (/*rank == 5 || */random_fail()) {      
     DEBUG_PRINT(("%d FAIIIIILLLLLL!!!!!!", rank));
     MPI_Finalize();
     exit (0);
@@ -39,7 +33,7 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
 {
   mw_work_t work;
   mw_result_t * computedResult;
-  //int ping = 1;
+  // int ping = 1;
   MPI_Status status;
 
   // parse command line arg for success probability
@@ -73,6 +67,6 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
     //DEBUG_PRINT(("result sent"));
 
     // send ping after unit of work is possibly sent
-    //MPI_Send(&ping, 1, MPI_INT, 1, WORK_SUP_TAG, MPI_COMM_WORLD);
+    //MPI_Send(&ping, 1, MPI_INT, 1, PING_TAG, MPI_COMM_WORLD);
   }
 }
