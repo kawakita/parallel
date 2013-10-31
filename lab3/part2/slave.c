@@ -8,7 +8,7 @@
 #define DEBUG 1
 
 int random_fail(){
-  int p = 999;
+  int p = 997;
   int range = 1000;
   int r = rand();
   int r_mod = r % range;
@@ -22,7 +22,7 @@ int random_fail(){
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank)
 {
-  if (rank ==0 || 0 /*random_fail()*/) {      
+  if (rank == 0 || random_fail()) {      
     DEBUG_PRINT(("%d FAIIIIILLLLLL!!!!!!", rank));
     MPI_Finalize();
     exit (0);

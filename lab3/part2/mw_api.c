@@ -10,7 +10,6 @@ void MW_Run(int argc, char **argv, struct mw_api_spec *f)
 
   if(0 == myid)
   {
-    printf("Entering master\n");
     do_master_stuff(argc, argv, f);
   }
   else if(1 == myid)
