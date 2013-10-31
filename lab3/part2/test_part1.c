@@ -147,7 +147,7 @@ int process_results(int sz, mw_result_t * res)
 	
   for(i=0; i<sz; ++i)
   {
-  	num_factors += res[i].n;
+    num_factors += res[i].n;
   }
 
   mpz_t * all_factors = malloc(sizeof(mpz_t) * num_factors);
