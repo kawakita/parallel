@@ -38,6 +38,14 @@ LinkedList * listFromArray(mw_work_t ** array)
 	return head;
 }
 
+void addNode(LinkedList * cur_node)
+{
+  assert (cur_node->next == NULL);
+  LinkedList * new_node = new_linkedlist_node();
+  assert (new_node->next == NULL);
+  cur_node->next = new_node;
+}
+
 int list_length(LinkedList * node)
 {
 	if(node == NULL) return 0;
@@ -49,6 +57,8 @@ int list_length(LinkedList * node)
 	}
 	return length;
 }
+
+
 
 void move_node_to_end(LinkedList * node)
 {

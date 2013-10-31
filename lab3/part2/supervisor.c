@@ -97,7 +97,7 @@ void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
     MPI_Test(&request2, &received_update, &status2);
     if(received_update)
     {
-      DEBUG_PRINT(("got an update from master"));
+      //DEBUG_PRINT(("got an update from master"));
     }
     
     //DEBUG_PRINT(("supervisor is about to check if the slaves are different"));
@@ -181,8 +181,6 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
   MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
   number_of_slaves = number_of_slaves - number_of_nonslaves;
   
-  LinkedList * work_list;
-
   double start, end, start_create, end_create, start_results, end_results;
 
   start = MPI_Wtime();
@@ -191,7 +189,7 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
   start_create = MPI_Wtime();
   // save work_array separately so we can find index later on
   mw_work_t ** work_array = f->create(argc, argv);
-  work_list = listFromArray(work_array);
+  // create work_list later
   end_create = MPI_Wtime();
   DEBUG_PRINT(("created work in %f seconds!", end_create - start_create));
 
@@ -199,12 +197,16 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
 
   num_work_units = get_total_units(work_array);
 
-  mw_result_t * received_results = malloc(f->res_sz * num_work_units);
+  DEBUG_PRINT(("num_work_units %d\n", num_work_units));
+
+  mw_result_t * received_results = calloc(num_work_units, f->res_sz);
   if (received_results == NULL)
   {
     fprintf(stderr, "ERROR: insufficient memory to allocate received_results\n");
     exit(0);
   }
+
+  int * has_result_array = calloc(num_work_units, sizeof(int));
 
   int num_results_received = 0;
 
@@ -216,14 +218,46 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
     char str[1000];
     while(fscanf(file, "%d %s", &result_index, str) != EOF)
     {
-      //printf("%d %s\n", result_index, str);          
+      // printf("%d %s\n", result_index, str);          
       // update received results  
       mw_result_t * result = f->from_str(str);
       received_results[result_index] = *result;
-      // update num_results_received   
+      // update has_results_array
+      has_result_array[result_index] = 1;
+      // update num_results_stored   
       num_results_received++;
     }
   }
+
+  // check to see if already have all results
+  if (num_results_received == num_work_units)
+    return;
+
+  // create linked list of indices not in the results array
+  LinkedList * work_list = new_linkedlist_node();
+  LinkedList * next_work_node = work_list;
+  LinkedList * head = work_list;
+
+  // cycle through has_result_array to find indices not in results array
+  int i;
+  int num_results_needed = 0;
+  for (i = 0; i < num_work_units; i++)
+  {
+    if (has_result_array[i] == 0)
+    {
+      next_work_node->index = i;
+      next_work_node->data = work_array[i];
+      if (num_results_needed < (num_work_units-num_results_received)-1)
+        addNode(next_work_node);
+      if (next_work_node->next == NULL);
+        next_work_node = next_work_node->next;
+      num_results_needed++;
+    }
+  }
+  DEBUG_PRINT(("num_results_received %d", num_results_received));
+
+  // reset next_work_node to head
+  next_work_node = head;
 
   // tell slaves to send to supervisor now
   int slave;
@@ -231,13 +265,6 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
     DEBUG_PRINT(("Telling slave"));
     MPI_Send(0, 0, MPI_CHAR, slave, M_FAIL_TAG, MPI_COMM_WORLD);
   }
-
-  return;
-/*
-      //receive all initial messages
-      for(i=0; i<num_work_units; i++) {
-        //MPI_Irecv(received_results[i], f->res_sz, MPI_CHAR, WORK_TAG, MPI_COMM_WORLD, &slave_request);
-      }
 
   // make array keeping track of pointers for work that's active
   LinkedList* assignment_ptrs[number_of_slaves];
@@ -251,10 +278,8 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
   // create array indicating if slaves are down
   int are_you_down[number_of_slaves];
 
-  // current pointer
-  LinkedList
-  * next_work_node = work_list,
-  * list_end = NULL;
+  // pointer for end of list
+  LinkedList * list_end = NULL;
 
   // have supervisor so starting at number_of_nonslaves
   for(slave=number_of_nonslaves; slave<(number_of_slaves+number_of_nonslaves); ++slave)
@@ -292,9 +317,7 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
     DEBUG_PRINT(("work sent to slave"));
   }
 
-  // send time array to supervisor
-  DEBUG_PRINT(("Sending supervisor first time update"));
-  MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+  // no need to send time array to supervisor
 
   // failure id
   int failure_id;
@@ -303,32 +326,20 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
   MPI_Request request_fail, request_res;
   int flag_fail = 0, flag_res = 0;
 
-  // receive failure from supervisor as non-blocking recv
-  MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
-
   // receive result from workers as non-blocking recv
   MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
 
-  //int ping_sup = 0;
-
-  // clear out file
+  // don't clear out file
   FILE * fptr;
-  fptr = fopen("recovery.txt", "w");
-  fclose(fptr);
 
   // send units of work while haven't received all results
   while(num_results_received < num_work_units)
   {
-    // send ping to supervisor
-    //MPI_Send(&ping_sup, 1, MPI_INT, 1, M_PING_TAG, MPI_COMM_WORLD);
-
-    // check for flag_fail
-    MPI_Test(&request_fail, &flag_fail, &status_fail);
-
     // check for flag_res
     MPI_Test(&request_res, &flag_res, &status_res);
 
     // send work if have failures or got results
+    // TODO change this
     if (flag_fail)
     {
         DEBUG_PRINT(("received failure from supervisor, process %d", failure_id));
@@ -362,7 +373,7 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
         assignment_ptrs[failure_id] = NULL;
         assignment_time[failure_id] = 0.0;
         assignment_indices[failure_id] = -1;
-        MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+        //MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
         flag_fail = 0;
         // continue to receive failures from supervisor as non-blocking recv
         MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
@@ -384,7 +395,7 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
         assignment_ptrs[idle_process] = next_work_node;
         assignment_time[idle_process] = MPI_Wtime();
         assignment_indices[idle_process] = next_work_node->index;
-        MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+        //MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
         DEBUG_PRINT(("Gave an assignment to previously idle process %d, assignment at %p", idle_process, next_work_node));
         if(next_work_node->next == NULL)
         {
@@ -395,19 +406,21 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
 
     if (flag_res)
     {
+      //DEBUG_PRINT(("Got result"));
       int worker_number = status_res.MPI_SOURCE-number_of_nonslaves;
      
       if(!are_you_down[worker_number]) //If this slave is marked dead, just ignore him
       {
         // save index and result received to file
-
         char * str = f->to_str(received_results[num_results_received]);
         fptr = fopen("recovery.txt", "a");
-        fprintf(fptr, "%d|%s\n", assignment_indices[worker_number], str);
+        fprintf(fptr, "%d %s\n", assignment_indices[worker_number], str);
         fclose(fptr);
 
         // update number of results received
         num_results_received++;
+
+        DEBUG_PRINT(("num results received %d\n", num_results_received));
 
         if(next_work_node == NULL && list_end != NULL && list_end->next != NULL)
         {
@@ -419,6 +432,8 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
         {
           // get work_unit
           mw_work_t* work_unit = next_work_node->data;
+          
+          //DEBUG_PRINT(("Sending new unit of work"));
 
           // send new unit of work
           send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
@@ -435,8 +450,8 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
           assignment_time[status_res.MPI_SOURCE-number_of_nonslaves] = MPI_Wtime();
           assignment_indices[status_res.MPI_SOURCE-number_of_nonslaves] = next_work_node->index;
           // send updated array of times to supervisor
-          MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-          DEBUG_PRINT(("SENT TIME TO SUP"));
+          //MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+          //DEBUG_PRINT(("SENT TIME TO SUP"));
           next_work_node = next_work_node->next;
           if(next_work_node == NULL)
           {
@@ -450,7 +465,7 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
             assignment_ptrs[worker_number] = NULL;
             assignment_indices[worker_number] = -1;
             assert(!are_you_down[worker_number]);
-            MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+            //MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
         }
       }
       // continue to receive results from workers as non-blocking recv
@@ -458,8 +473,8 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
     }
   }
 
-  // send kill signal to other processes, including supervisor
-  for(slave=1; slave<number_of_slaves+number_of_nonslaves; ++slave)
+  // send kill signal to other processes
+  for(slave=number_of_nonslaves; slave<number_of_slaves+number_of_nonslaves; ++slave)
   {
     DEBUG_PRINT(("Murdering slave"));
     kill_slave(slave);
@@ -474,5 +489,4 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
   DEBUG_PRINT(("all %f s\n", end-start));
   DEBUG_PRINT(("create %f s\n", end_create-start_create));
   DEBUG_PRINT(("process %f s\n", end_results-start_results));
-*/
 }

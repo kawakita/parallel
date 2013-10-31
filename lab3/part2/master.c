@@ -8,7 +8,7 @@ void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave,
 void kill_slave(int slave);
 int get_total_units(mw_work_t ** work_list);
 
-#define DEBUG 1
+#define DEBUG 0
 
 void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
@@ -108,8 +108,8 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   // send time array to supervisor
   DEBUG_PRINT(("Sending supervisor first time update"));
-  MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-  //F_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD, rank);
+  //MPI_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+  F_Send(assignment_time, number_of_slaves, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD, rank);
 
   // failure id
   int failure_id;
@@ -123,8 +123,6 @@ void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 
   // receive result from workers as non-blocking recv
   MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
-
-  //int ping_sup = 0;
 
   // clear out file
   FILE * fptr;

@@ -7,19 +7,22 @@
 
 #define DEBUG 1
 
-// success probability
-static float p = 1.95;
-
-// implement random_fail()
-int random_fail()
-{
-  float r = ((float) rand())/RAND_MAX;
-  return r > p;
+int random_fail(){
+  int p = 999;
+  int range = 1000;
+  int r = rand();
+  int r_mod = r % range;
+  //printf("@@@ random_fail : r=%d, r_mod=%d, shouldfail=%d\n",r,r_mod,(r_mod>p));
+  if(r_mod > p) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank)
 {
-  if (rank ==0 || 0) {      
+  if (rank ==0 || 0 /*random_fail()*/) {      
     DEBUG_PRINT(("%d FAIIIIILLLLLL!!!!!!", rank));
     MPI_Finalize();
     exit (0);
@@ -32,6 +35,7 @@ int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_C
 void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
 {
 
+  int p;
   // parse command line arg for success probability
   if (argc == 3)
   {
@@ -64,10 +68,11 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
     if ((flag_master || flag_sup) && (status_master.MPI_TAG == KILL_TAG || status_sup.MPI_TAG == KILL_TAG))
         return;
 
-    if ((flag_sup)&&(status_sup.MPI_TAG == M_FAIL_TAG))
+    if (!master_failed && flag_sup && (status_sup.MPI_TAG == M_FAIL_TAG))
     {
+      //printf("MASTER FAILED\n");
       master_failed = 1;
-      printf("master failed: %d\n", master_failed);
+      MPI_Irecv(&work, f->work_sz, MPI_CHAR, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_sup);
     }
 
     if (!master_failed && flag_master && status_master.MPI_TAG == WORK_TAG)
@@ -76,8 +81,9 @@ void be_a_slave(int argc, char** argv, struct mw_api_spec *f)
       F_Send(computedResult, f->res_sz, MPI_CHAR, 0, WORK_TAG, MPI_COMM_WORLD, rank);
       MPI_Irecv(&work, f->work_sz, MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &request_master);
     }
-   else if (master_failed && flag_sup && status_sup.MPI_TAG == WORK_TAG)
-   {
+    else if (master_failed && flag_sup && status_sup.MPI_TAG == WORK_TAG)
+    {
+      //printf("MASTER FAILED SENDING RESULT\n");
       computedResult = f->compute(&work);
       F_Send(computedResult, f->res_sz, MPI_CHAR, 1, WORK_TAG, MPI_COMM_WORLD, rank);
       MPI_Irecv(&work, f->work_sz, MPI_CHAR, 1, MPI_ANY_TAG, MPI_COMM_WORLD, &request_sup);

@@ -161,6 +161,8 @@ int process_results(int sz, mw_result_t * res)
 	  mpz_init_set(all_factors[current_factor++], factors[j]);
   }
 
+  printf("start of factors\n");
+
   for(i=0; i<num_factors; ++i)
   {
     gmp_printf("%Zd\n", all_factors[i]);
@@ -266,12 +268,15 @@ mw_result_t* str_to_result(char * s)
   }
   else
   {
+    //printf("str %s\n", s);
     while(s[i] != '\0')
     {
       if (s[i] == ',')
       {
+        //printf("%d\n", num_commas);
         s[i] = '\0';
         num_commas++;
+        //printf("str %s\n", s);
       }
       i++;
     }
@@ -283,6 +288,18 @@ mw_result_t* str_to_result(char * s)
   return result;
 }
 
+mw_result_t* empty_result() 
+{
+  mw_result_t* result = malloc(sizeof(mw_result_t));
+  strcpy(result->nums,'\0');
+  result->n = 0;
+  return result;
+}
+
+int results_equal(mw_result_t* x, mw_result_t* y) 
+{
+  return strcmp(x->nums, y->nums)==0 && ((x->n)==(y->n));
+}
 
 int main (int argc, char **argv)
 {
@@ -302,6 +319,8 @@ int main (int argc, char **argv)
   f.compute = do_work;
   f.to_str = result_to_str;
   f.from_str = str_to_result;
+  f.empty_result = empty_result;
+  f.results_equal = results_equal;
   f.work_sz = sizeof(struct userdef_work_t);
   f.res_sz = sizeof(struct userdef_result_t);
 
