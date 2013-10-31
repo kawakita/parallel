@@ -32,12 +32,6 @@ struct mw_api_spec {
   mw_result_t* (*from_str) (char * s);
   /* convert string into a result that can be stored in the collection of results */
 
-  mw_result_t* (*empty_result) ();
-  /* provide result for what an empty_result would look like */
-
-  int (*results_equal) (mw_result_t* x, mw_result_t* y);
-  /* provide equals function for two results */
-
 };
 
 void MW_Run (int argc, char **argv, struct mw_api_spec *f); /* run master-worker */

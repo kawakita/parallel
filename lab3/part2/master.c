@@ -8,7 +8,7 @@ void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave,
 void kill_slave(int slave);
 int get_total_units(mw_work_t ** work_list);
 
-#define DEBUG 1
+#define DEBUG 0
 
 void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {

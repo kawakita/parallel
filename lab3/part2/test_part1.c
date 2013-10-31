@@ -7,7 +7,7 @@
 #include <assert.h>
 
 #define LARGE_NUM "68719476736"
-#define LARGE_NUM "1000000"
+//#define LARGE_NUM "1000000"
 
 char* mpz_to_buffer(char* buf, mpz_t* nums, unsigned int n)
 {
@@ -27,9 +27,9 @@ mpz_t* buffer_to_mpz(char* buf, unsigned int n)
   int i = 0;
   while(i < n)
   {
-  	mpz_init_set_str(mpzs[i], buf, 10);
-	buf += strlen(buf) + 1;
-	++i;
+      mpz_init_set_str(mpzs[i], buf, 10);
+      buf += strlen(buf) + 1;
+      ++i;
   }
   return mpzs;
 }
@@ -167,6 +167,7 @@ int process_results(int sz, mw_result_t * res)
   {
     gmp_printf("%Zd\n", all_factors[i]);
   }
+  return 0;
 }
 
 mw_result_t * do_work(mw_work_t * work)
@@ -188,7 +189,7 @@ mw_result_t * do_work(mw_work_t * work)
   if (factors == NULL)
   {
     free(factors);
-    return;
+    return NULL;
   }
 
   // check if divisors from start to end are factors of num
@@ -272,12 +273,12 @@ mw_result_t* str_to_result(char * s)
     //printf("str %s\n", s);
     while(s[i] != '\0')
     {
+      //printf("str %s\n", s[i]);
       if (s[i] == ',')
       {
         //printf("%d\n", num_commas);
         s[i] = '\0';
         num_commas++;
-        //printf("str %s\n", s);
       }
       i++;
     }
@@ -287,19 +288,6 @@ mw_result_t* str_to_result(char * s)
 
   DEBUG_PRINT(("Returning result %s", result->nums));
   return result;
-}
-
-mw_result_t* empty_result() 
-{
-  mw_result_t* result = malloc(sizeof(mw_result_t));
-  strcpy(result->nums,'\0');
-  result->n = 0;
-  return result;
-}
-
-int results_equal(mw_result_t* x, mw_result_t* y) 
-{
-  return strcmp(x->nums, y->nums)==0 && ((x->n)==(y->n));
 }
 
 int main (int argc, char **argv)
@@ -320,12 +308,8 @@ int main (int argc, char **argv)
   f.compute = do_work;
   f.to_str = result_to_str;
   f.from_str = str_to_result;
-  f.empty_result = empty_result;
-  f.results_equal = results_equal;
   f.work_sz = sizeof(struct userdef_work_t);
   f.res_sz = sizeof(struct userdef_result_t);
-
-  double start, end;
 
   MW_Run (argc, argv, &f);
 

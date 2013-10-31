@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#define DEBUG 1
+#define DEBUG 0
 
 int random_fail(){
   int p = 997;
@@ -22,7 +22,7 @@ int random_fail(){
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank)
 {
-  if (rank == 0 || random_fail()) {      
+  if (0 || random_fail()) {      
     DEBUG_PRINT(("%d FAIIIIILLLLLL!!!!!!", rank));
     MPI_Finalize();
     exit (0);

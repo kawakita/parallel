@@ -6,7 +6,7 @@
 #include "def_structs.h"
 #include "linked_list.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f);
 //void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f, double * assignment_time1, double * complete_time, double threshold, double tot_time, double sq_err, double mean, double stddev);
