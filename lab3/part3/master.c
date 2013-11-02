@@ -6,12 +6,17 @@
 #include "linked_list.h"
 #include "map_reduce.h"
 #include "mw.h"
+#include "debug.h"
 
 #define DEBUG 0
+
+static char * result_file_name = "this_is_the_map_result_file";
 
 static GHashTable 
     * finished,
     * intermediate_results;
+
+static GList * unfinished;
 
 static int 
     * are_you_down,
@@ -42,7 +47,8 @@ void a_process_finished_reduce(int worker_id)
 
 void handle_intermediate_result(intermediate_t * intermediate_result_buffer)
 {
-    if(!g_hash_table_contains(intermediate_results, intermediate_result_buffer->word))
+    //TODO replace contains with something from 2.28
+    if(!g_hash_table_lookup(intermediate_results, intermediate_result_buffer->word))
     {
         char * new_key = malloc(strlen(intermediate_result_buffer->word) * sizeof(char));
         strcpy(new_key, intermediate_result_buffer->word);
@@ -53,7 +59,7 @@ void handle_intermediate_result(intermediate_t * intermediate_result_buffer)
     assert(intermediate_results != NULL);
     GHashTable * values = g_hash_table_lookup(intermediate_results, intermediate_result_buffer->word);
     assert(values != NULL);
-    g_hash_table_add(values, &(intermediate_result_buffer->frequency));
+    g_hash_table_insert(values, &(intermediate_result_buffer->frequency), &(intermediate_result_buffer->frequency));
 }
 
 int next_available_worker()
@@ -69,14 +75,22 @@ int next_available_worker()
     return -1;
 }
 
+void get_unfinished_reduce(char * key, GHashTable * vals, void * nothing)
+{
+    if(g_hash_table_contains(finished, key))
+    {
+        return;
+    }
+    unfinished = g_list_append(unfinished, key); 
+}
+
 void try_to_assign_reduce()
 {
     assert(intermediate_results != NULL);
-    GList * key = g_hash_table_get_keys(intermediate_results);
-    while(key && g_hash_table_contains(finished, key->data))
-    {
-        key = g_list_next(key);
-    }
+    unfinished = NULL;
+    g_hash_table_foreach(intermediate_results, (GHFunc) get_unfinished_reduce, NULL);
+    GList * key = unfinished;
+    if(key == NULL) { DEBUG_PRINT(("No unfinished values??")); }
     int worker_id = next_available_worker();
     if(key == NULL || worker_id == -1) return;
     DEBUG_PRINT(("assigning reduce %s to %d", key->data, worker_id+2));
@@ -86,18 +100,21 @@ void try_to_assign_reduce()
     assignment_time[worker_id] = MPI_Wtime();
     assert(intermediate_results != NULL);
     GHashTable * value_table = g_hash_table_lookup(intermediate_results, key->data);
-    DEBUG_PRINT(("Getting value from table %s", key->data));
+    //DEBUG_PRINT(("Getting value from table %s", key->data));
     assert(value_table != NULL);
     GList * value = g_hash_table_get_keys(value_table);
     while(value)
     {
-        MPI_Send(value->data, sizeof(value->data), MPI_CHAR, worker_id+2, REDUCE_VALUE_TAG, MPI_COMM_WORLD);
+        //This is the one that is crashing on the slave side!
+        //printf("sending value %d bytes: %d\n", *(value->data), sizeof(*(value->data)));
+        MPI_Send(value->data, sizeof(*(value->data)), MPI_CHAR, worker_id+2, REDUCE_VALUE_TAG, MPI_COMM_WORLD);
         DEBUG_PRINT(("Sent a reduction value"));
         value = g_list_next(value);
     }
     char nothing;
     MPI_Send(&nothing, 1, MPI_CHAR, worker_id+2, FINISHED_REDUCE_TAG, MPI_COMM_WORLD);
     g_hash_table_add(finished, key->data);
+    g_list_free(unfinished);
 }
 
 void try_to_assign_work(LinkedList ** next_work_node)
@@ -184,7 +201,7 @@ void do_master_stuff(int argc, char ** argv, struct map_reduce_api_spec *f)
     flag_intermediate,
     flag_fail;
 
-  char * intermediate_result_buffer = malloc(sizeof(char) * sizeof(intermediate_t));
+  intermediate_t * intermediate_result_buffer = malloc(sizeof(char) * sizeof(intermediate_t));
   assert(intermediate_result_buffer != NULL);
   char nothing;
 
@@ -238,6 +255,8 @@ void do_master_stuff(int argc, char ** argv, struct map_reduce_api_spec *f)
     total_reduces = g_hash_table_size(intermediate_results),
     total_reduces_processed = 0;
 
+  FILE * result_file = fopen(result_file_name, "w");
+
   while(total_reduces_processed < total_reduces)
   {
       DEBUG_PRINT(("%d out of %d done", total_reduces_processed, total_reduces));
@@ -254,6 +273,7 @@ void do_master_stuff(int argc, char ** argv, struct map_reduce_api_spec *f)
       {
           int worker_id = status_finished_reduce.MPI_SOURCE - 2;
           a_process_finished_reduce(worker_id);
+          fprintf(result_file, "%s: %lld\n", map_reduce_result.word, map_reduce_result.total_frequency);
           total_reduces_processed++;
           MPI_Irecv(&map_reduce_result, sizeof(map_reduce_result_t), MPI_CHAR, MPI_ANY_SOURCE, FINISHED_REDUCE_TAG, MPI_COMM_WORLD, &request_finished_reduce);
       }
@@ -262,6 +282,8 @@ void do_master_stuff(int argc, char ** argv, struct map_reduce_api_spec *f)
   }
 
   kill_all_slaves();
+
+  fclose(result_file);
 
   DEBUG_PRINT(("ALL DONE! processed %d reductions", total_reduces_processed));
 }
@@ -310,4 +332,3 @@ LinkedList * create_map_work_list(map_reduce_api_spec * f, int argc, char ** arg
   DEBUG_PRINT(("created map work in %f seconds!", work_creation_time));
   return work_list;
 }
-

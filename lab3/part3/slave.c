@@ -8,7 +8,7 @@
 #include "map_reduce_user_def.h"
 #include "debug.h"
 
-#define debug 1
+#define DEBUG 1
 
 static map_work_t map_work;
 static reduce_key_t reduce_key;
@@ -26,7 +26,7 @@ int random_fail()
 
 int F_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, int rank)
 {
-  if (0 && rank == 5 || random_fail()) {      
+  if (0 && (rank == 5) || random_fail()) {      
     DEBUG_PRINT(("%d FAIIIIILLLLLL!!!!!!", rank));
     MPI_Finalize();
     exit (0);
@@ -104,9 +104,7 @@ void be_a_slave(int argc, char** argv, struct map_reduce_api_spec *_f)
   {
     if(start_reducing)
     {
-        DEBUG_PRINT(("%d Starting reduction!", rank));
         MPI_Test(&request_reduce_val, &flag_reduce_val, &status_reduce_val); //THIS FAILS!!
-        DEBUG_PRINT(("Testing"));
         if(flag_reduce_val)
         {
             DEBUG_PRINT(("%d received value", rank));
@@ -115,7 +113,7 @@ void be_a_slave(int argc, char** argv, struct map_reduce_api_spec *_f)
         }
         else
         {
-            DEBUG_PRINT(("%d received no value", rank));
+            //DEBUG_PRINT(("%d received no value", rank));
             MPI_Test(&request_finish_reduce, &flag_finish_reduce, &status_finish_reduce);
             if(flag_finish_reduce)
             {
