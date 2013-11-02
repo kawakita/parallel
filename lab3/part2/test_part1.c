@@ -254,10 +254,6 @@ char * result_to_str(mw_result_t result)
       }
       i++;
     }
-    if (result.n == 6) {
-      printf("result->nums %s\n", result.nums);
-      printf("result->nums %s\n", result.nums+2);
-    }
   }
   return s;
 }
@@ -266,7 +262,8 @@ mw_result_t* str_to_result(char * s)
 {
   mw_result_t* result = malloc(sizeof(mw_result_t));
   int i = 0, num_commas = 0;
-  assert (strlen(s) > 0);
+  int len = strlen(s);
+  assert (len > 0);
   if (s[0] == '0')
   {  
     strcpy(result->nums,s);
@@ -284,17 +281,10 @@ mw_result_t* str_to_result(char * s)
       }
       i++;
     }
-    strcpy(result->nums,s);
+    memcpy(result->nums,s,len);
     result->n = num_commas + 1;
   }
 
-  //if (result->n == 6)
-    //printf("num_commas %d\n", num_commas);
-  if (result->n == 6) {
-    printf("str %s\n", s);
-    printf("str %s\n", s+2);
-    printf("Returning result %s of length %u\n", result->nums, result->n);
-  }
   DEBUG_PRINT(("Returning result %s", result->nums));
   return result;
 }
