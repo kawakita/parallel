@@ -254,6 +254,10 @@ char * result_to_str(mw_result_t result)
       }
       i++;
     }
+    if (result.n == 6) {
+      printf("result->nums %s\n", result.nums);
+      printf("result->nums %s\n", result.nums+2);
+    }
   }
   return s;
 }
@@ -270,10 +274,8 @@ mw_result_t* str_to_result(char * s)
   }
   else
   {
-    //printf("str %s\n", s);
     while(s[i] != '\0')
     {
-      //printf("str %s\n", s[i]);
       if (s[i] == ',')
       {
         //printf("%d\n", num_commas);
@@ -286,6 +288,13 @@ mw_result_t* str_to_result(char * s)
     result->n = num_commas + 1;
   }
 
+  //if (result->n == 6)
+    //printf("num_commas %d\n", num_commas);
+  if (result->n == 6) {
+    printf("str %s\n", s);
+    printf("str %s\n", s+2);
+    printf("Returning result %s of length %u\n", result->nums, result->n);
+  }
   DEBUG_PRINT(("Returning result %s", result->nums));
   return result;
 }

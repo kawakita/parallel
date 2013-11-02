@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <gmp.h>
 
 #include "mw.h"
 #include "def_structs.h"
@@ -9,7 +10,6 @@
 #define DEBUG 0
 
 void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f);
-//void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f, double * assignment_time1, double * complete_time, double threshold, double tot_time, double sq_err, double mean, double stddev);
 
 void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
 {
@@ -248,8 +248,10 @@ void do_supervisor_as_master_stuff(int argc, char ** argv, struct mw_api_spec *f
     while(fscanf(file, "%d %s", &result_index, str) != EOF)
     {
       //printf("%d %s\n", result_index, str);          
+
       // update received results  
       mw_result_t * result = f->from_str(str);
+
       //printf("here\n");
       received_results[result_index] = *result;
       //printf("now here\n");
