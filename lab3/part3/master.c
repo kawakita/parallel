@@ -8,15 +8,13 @@
 #include "mw.h"
 #include "debug.h"
 
-#define DEBUG 0
-
 static char * result_file_name = "this_is_the_map_result_file";
 
 static GHashTable 
     * finished,
     * intermediate_results;
 
-static GList * unfinished;
+static GList * table_keys;
 
 static int 
     * are_you_down,
@@ -77,19 +75,19 @@ int next_available_worker()
 
 void get_unfinished_reduce(char * key, GHashTable * vals, void * nothing)
 {
-    if(g_hash_table_contains(finished, key))
+    if(g_hash_table_contains(finished, key)) //fix this
     {
         return;
     }
-    unfinished = g_list_append(unfinished, key); 
+    table_keys = g_list_append(table_keys, key); 
 }
 
 void try_to_assign_reduce()
 {
     assert(intermediate_results != NULL);
-    unfinished = NULL;
+    table_keys = NULL;
     g_hash_table_foreach(intermediate_results, (GHFunc) get_unfinished_reduce, NULL);
-    GList * key = unfinished;
+    GList * key = table_keys;
     if(key == NULL) { DEBUG_PRINT(("No unfinished values??")); }
     int worker_id = next_available_worker();
     if(key == NULL || worker_id == -1) return;
@@ -102,7 +100,7 @@ void try_to_assign_reduce()
     GHashTable * value_table = g_hash_table_lookup(intermediate_results, key->data);
     //DEBUG_PRINT(("Getting value from table %s", key->data));
     assert(value_table != NULL);
-    GList * value = g_hash_table_get_keys(value_table);
+    GList * value = g_hash_table_get_keys(value_table); //fix this
     while(value)
     {
         //This is the one that is crashing on the slave side!
@@ -113,8 +111,8 @@ void try_to_assign_reduce()
     }
     char nothing;
     MPI_Send(&nothing, 1, MPI_CHAR, worker_id+2, FINISHED_REDUCE_TAG, MPI_COMM_WORLD);
-    g_hash_table_add(finished, key->data);
-    g_list_free(unfinished);
+    g_hash_table_add(finished, key->data);//fix this
+    g_list_free(table_keys);
 }
 
 void try_to_assign_work(LinkedList ** next_work_node)

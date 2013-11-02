@@ -8,8 +8,6 @@
 #include "map_reduce_user_def.h"
 #include "debug.h"
 
-#define DEBUG 1
-
 static map_work_t map_work;
 static reduce_key_t reduce_key;
 static reduce_val_t reduce_val;

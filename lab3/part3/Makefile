@@ -12,7 +12,7 @@ SOURCE=linked_list.c\
        slave.c
 OBJECTS=$(SOURCE:.c=.o)
 EXEC=map
-DEBUG=1
+DEBUG=0
 
 all:
 	echo specify a target
