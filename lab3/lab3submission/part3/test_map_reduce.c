@@ -8,8 +8,6 @@
 #include "map_reduce.h"
 #include "debug.h"
 
-#define debug 1
-
 static char * filenames[] = { "moby_dick_part_aa",
                               "moby_dick_part_ab",
                               "moby_dick_part_ac",

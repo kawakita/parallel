@@ -1,8 +1,6 @@
 CC=mpicc
 CFLAGS=-g -Wall
-INCLUDE=-I/usr/include/glib-2.0/\
-        -I/usr/lib/glib-2.0/include/\
-		-I/usr/lib/x86_64-linux-gnu/glib-2.0/include/
+INCLUDE=-I/usr/include/glib-2.0/ -I/usr/lib/x86_64-linux-gnu/glib-2.0/include/
 RUN=mpirun
 HOSTS=--hostfile ../../../hosts
 n=10
@@ -14,7 +12,7 @@ SOURCE=linked_list.c\
        slave.c
 OBJECTS=$(SOURCE:.c=.o)
 EXEC=map
-DEBUG=1
+DEBUG=0
 
 all:
 	echo specify a target
