@@ -1,0 +1,37 @@
+master.c:10:1: warning: "DEBUG" redefined
+<command line>:1:1: warning: this is the location of the previous definition
+master.c: In function ‘handle_intermediate_result’:
+master.c:45: warning: implicit declaration of function ‘g_hash_table_contains’
+master.c:56: warning: implicit declaration of function ‘g_hash_table_add’
+master.c: In function ‘try_to_assign_reduce’:
+master.c:75: warning: implicit declaration of function ‘g_hash_table_get_keys’
+master.c:75: warning: initialization makes pointer from integer without a cast
+master.c:91: warning: initialization makes pointer from integer without a cast
+master.c: In function ‘do_master_stuff’:
+master.c:208: warning: passing argument 1 of ‘handle_intermediate_result’ from incompatible pointer type
+master.c:158: warning: unused variable ‘list_end’
+master.c:132: warning: unused variable ‘end_results’
+master.c:131: warning: unused variable ‘start_results’
+master.c:130: warning: unused variable ‘end_create’
+master.c:129: warning: unused variable ‘start_create’
+master.c:128: warning: unused variable ‘end’
+map_reduce.c: In function ‘MW_Run’:
+map_reduce.c:14: warning: implicit declaration of function ‘do_master_stuff’
+map_reduce.c:22: warning: implicit declaration of function ‘be_a_slave’
+map_reduce.c: At top level:
+debug.h:20: warning: ‘debug_printf’ defined but not used
+slave.c: In function ‘F_Send’:
+slave.c:29: warning: suggest parentheses around && within ||
+slave.c: In function ‘be_a_slave’:
+slave.c:57: warning: unused variable ‘status’
+slave.c:56: warning: unused variable ‘computedResult’
+master.o: In function `handle_intermediate_result':
+/home/cluster/parallel/lab3/part3/master.c:45: undefined reference to `g_hash_table_contains'
+/home/cluster/parallel/lab3/part3/master.c:56: undefined reference to `g_hash_table_add'
+master.o: In function `try_to_assign_reduce':
+/home/cluster/parallel/lab3/part3/master.c:75: undefined reference to `g_hash_table_get_keys'
+/home/cluster/parallel/lab3/part3/master.c:76: undefined reference to `g_hash_table_contains'
+/home/cluster/parallel/lab3/part3/master.c:91: undefined reference to `g_hash_table_get_keys'
+/home/cluster/parallel/lab3/part3/master.c:100: undefined reference to `g_hash_table_add'
+collect2: ld returned 1 exit status
+make: *** [map] Error 1
