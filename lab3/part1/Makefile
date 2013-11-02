@@ -12,8 +12,8 @@ PART1_SOURCE=master.c\
 			 supervisor.c\
 			 test_part1.c
 PART1_OBJECTS=$(PART1_SOURCE:.c=.o)
-PART1_EXEC=exec_part2
-DEBUG=0
+PART1_EXEC=part1
+DEBUG=1
 
 all:
 	echo specify a target

@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <assert.h>
 #include "linked_list.h"
 
@@ -10,12 +11,12 @@ LinkedList * new_linkedlist_node()
 }
 
 /* array must be null terminated */
-LinkedList * listFromArray(mw_work_t ** array)
+LinkedList * listFromArray(map_work_t ** array)
 {
 	if(*array == NULL) return NULL;
 	
 	LinkedList * head = new_linkedlist_node();
-	mw_work_t ** array_iterator = array;
+	map_work_t ** array_iterator = array;
 	head->data = *array_iterator;
 	array_iterator++;
 	LinkedList * current_node = head;

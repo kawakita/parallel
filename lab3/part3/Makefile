@@ -1,31 +1,30 @@
 CC=mpicc
-CFLAGS=-Wall -g
+CFLAGS=-g -Wall
 INCLUDE=-I/usr/include/glib-2.0/ -I/usr/lib/x86_64-linux-gnu/glib-2.0/include/
-#LIBS=-lglib-2.0
 RUN=mpirun
 HOSTS=--hostfile ../../hosts
 n=10
-PART1_SOURCE=master.c\
-             mw_api.c\
-             slave.c\
-			 linked_list.c\
-			 supervisor.c\
-			 test_part1.c
-PART1_OBJECTS=$(PART1_SOURCE:.c=.o)
-PART1_EXEC=part1
-DEBUG=0
+SOURCE=linked_list.c\
+       master.c\
+       test_map_reduce.c\
+       map_reduce.c\
+       supervisor.c\
+       slave.c
+OBJECTS=$(SOURCE:.c=.o)
+EXEC=map
+DEBUG=1
 
 all:
 	echo specify a target
 
-$(PART1_EXEC): $(PART1_OBJECTS)
-	$(CC) $(PART1_OBJECTS) -o $(PART1_EXEC) -lgmp
+$(EXEC): $(OBJECTS)
+	$(CC) $(OBJECTS) -o $(EXEC) -lglib-2.0
 
-run_part1: $(PART1_SOURCES) $(PART1_EXEC)
-	$(RUN) $(HOSTS) -n $(n) $(PART1_EXEC) 100
+run: $(SOURCES) $(EXEC)
+	$(RUN) $(HOSTS) -n $(n) $(EXEC)
 
 .c.o:
 	$(CC) $(INCLUDE) -DDEBUG=$(DEBUG) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o *~ *.*\# $(PART1_EXEC) core*
+	rm -f *.o *~ *.*\# $(EXEC) core*

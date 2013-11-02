@@ -1,11 +1,13 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <string.h>
 
 #include "mw.h"
-#include "def_structs.h"
+#include "map_reduce_user_def.h"
+#include "debug.h"
 
-void do_supervisor_stuff(int argc, char ** argv, struct mw_api_spec *f)
+void do_supervisor_stuff(int argc, char ** argv, struct map_reduce_api_spec *f)
 {
   
   //DEBUG_PRINT(("supervisor starting"));

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <assert.h>
 
-#define LARGE_NUM "68719476736"
+#define LARGE_NUM "476736"
 
 char* mpz_to_buffer(char* buf, mpz_t* nums, unsigned int n)
 {

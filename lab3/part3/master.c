@@ -1,268 +1,296 @@
-
+#include <glib.h>
+#include <string.h>
+#include <mpi.h>
 #include <assert.h>
 
-#include "mw.h"
-#include "def_structs.h"
 #include "linked_list.h"
+#include "map_reduce.h"
+#include "mw.h"
 
-void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
-void kill_slave(int slave);
-int get_total_units(mw_work_t ** work_list);
+#define DEBUG 0
 
-void do_master_stuff(int argc, char ** argv, struct mw_api_spec *f)
+static GHashTable 
+    * finished,
+    * intermediate_results;
+
+static int 
+    * are_you_down,
+    * are_you_working,
+    work_creation_time,
+    number_of_slaves;
+
+static double * assignment_time;
+
+LinkedList ** assignment_ptrs;
+reduce_key_t ** reduce_assignment_ptrs;
+
+void send_map_to_slave(map_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
+void send_reduce_to_slave(reduce_key_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm);
+int get_total_units(map_work_t ** work_list);
+LinkedList * create_map_work_list(map_reduce_api_spec * f, int argc, char ** argv);
+void kill_all_slaves();
+
+void a_process_finished_map(int worker_id)
 {
+    are_you_working[worker_id] = 0;
+}
 
-  DEBUG_PRINT(("master starting"));
+void a_process_finished_reduce(int worker_id)
+{
+    are_you_working[worker_id] = 0;
+}
 
-  int number_of_slaves;
+void handle_intermediate_result(intermediate_t * intermediate_result_buffer)
+{
+    if(!g_hash_table_contains(intermediate_results, intermediate_result_buffer->word))
+    {
+        char * new_key = malloc(strlen(intermediate_result_buffer->word) * sizeof(char));
+        strcpy(new_key, intermediate_result_buffer->word);
+        g_hash_table_insert(intermediate_results, 
+                            new_key,
+                            g_hash_table_new(g_int_hash, g_int_equal));
+    }
+    assert(intermediate_results != NULL);
+    GHashTable * values = g_hash_table_lookup(intermediate_results, intermediate_result_buffer->word);
+    assert(values != NULL);
+    g_hash_table_add(values, &(intermediate_result_buffer->frequency));
+}
 
-  MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
-  
+int next_available_worker()
+{
+    int i;
+    for(i=0; i<number_of_slaves; ++i)
+    {
+        if(!are_you_down[i] && !are_you_working[i])
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void try_to_assign_reduce()
+{
+    assert(intermediate_results != NULL);
+    GList * key = g_hash_table_get_keys(intermediate_results);
+    while(key && g_hash_table_contains(finished, key->data))
+    {
+        key = g_list_next(key);
+    }
+    int worker_id = next_available_worker();
+    if(key == NULL || worker_id == -1) return;
+    DEBUG_PRINT(("assigning reduce %s to %d", key->data, worker_id+2));
+    MPI_Send(key->data, sizeof(reduce_key_t), MPI_CHAR, worker_id+2, REDUCE_KEY_TAG, MPI_COMM_WORLD);
+    are_you_working[worker_id] = 1;
+    reduce_assignment_ptrs[worker_id] = key->data;
+    assignment_time[worker_id] = MPI_Wtime();
+    assert(intermediate_results != NULL);
+    GHashTable * value_table = g_hash_table_lookup(intermediate_results, key->data);
+    DEBUG_PRINT(("Getting value from table %s", key->data));
+    assert(value_table != NULL);
+    GList * value = g_hash_table_get_keys(value_table);
+    while(value)
+    {
+        MPI_Send(value->data, sizeof(value->data), MPI_CHAR, worker_id+2, REDUCE_VALUE_TAG, MPI_COMM_WORLD);
+        DEBUG_PRINT(("Sent a reduction value"));
+        value = g_list_next(value);
+    }
+    char nothing;
+    MPI_Send(&nothing, 1, MPI_CHAR, worker_id+2, FINISHED_REDUCE_TAG, MPI_COMM_WORLD);
+    g_hash_table_add(finished, key->data);
+}
+
+void try_to_assign_work(LinkedList ** next_work_node)
+{
+    int worker = next_available_worker();
+    if(-1 == worker || NULL == *next_work_node)
+    {
+        return;
+    }
+    DEBUG_PRINT(("Assigning map work %s to %d", (*next_work_node)->data, worker+2));
+    MPI_Send((*next_work_node)->data, sizeof(map_work_t), MPI_CHAR, worker+2, MAP_WORK_TAG, MPI_COMM_WORLD);
+    are_you_working[worker] = 1; 
+    assignment_ptrs[worker] = (*next_work_node);
+    assignment_time[worker] = MPI_Wtime();
+    (*next_work_node) = (*next_work_node)->next;
+}
+
+void do_master_stuff(int argc, char ** argv, struct map_reduce_api_spec *f)
+{
+  int 
+    slave=1,
+    num_map_work_units=0;
+
   LinkedList * work_list;
 
-  double start, end, start_create, end_create, start_results, end_results;
+  double 
+    start, 
+    end, 
+    start_create, 
+    end_create, 
+    start_results, 
+    end_results;
 
+
+  MPI_Comm_size(MPI_COMM_WORLD, &number_of_slaves);
+  number_of_slaves -= 2;
   start = MPI_Wtime();
+  DEBUG_PRINT(("Creating work list"));
+  work_list = create_map_work_list(f, argc, argv);
+  num_map_work_units = list_length(work_list);
 
-  DEBUG_PRINT(("creating work list..."));
-  start_create = MPI_Wtime();
-  work_list = listFromArray(f->create(argc, argv));
-  end_create = MPI_Wtime();
-  DEBUG_PRINT(("created work in %f seconds!", end_create - start_create));
+  DEBUG_PRINT(("list length: %d", num_map_work_units));
 
-  int slave=1, num_work_units=0;
+  intermediate_results = g_hash_table_new(g_str_hash, g_str_equal);
+  finished = g_hash_table_new(g_str_hash, g_str_equal);
 
-  num_work_units = list_length(work_list);
+  DEBUG_PRINT(("created a hash table"));
 
-  mw_result_t * received_results =  malloc(f->res_sz * num_work_units);
-  if (received_results == NULL)
-  {
-    fprintf(stderr, "ERROR: insufficient memory to allocate received_results\n");
-	exit(0);
-  }
+  assignment_ptrs = malloc(sizeof(LinkedList*) * (number_of_slaves));
+  reduce_assignment_ptrs = malloc(sizeof(reduce_key_t*) * (number_of_slaves));
+  assignment_time = malloc(sizeof(double) * (number_of_slaves));
+  are_you_down = malloc(sizeof(double) * (number_of_slaves));
+  are_you_working = malloc(sizeof(double) * (number_of_slaves));
+  assert(assignment_ptrs && assignment_time && are_you_down && are_you_working);
 
-  int num_results_received = 0;
-
-  // make array keeping track of pointers for work that's active
-  LinkedList* assignment_ptrs[number_of_slaves-2];
-
-  // make array of binary indicators for inactive workers
-  // initially all workers are active and 0
-  //unsigned int inactive_workers[number_of_slaves-2];
-
-  // create array of start times
-  double assignment_time[number_of_slaves-2];
-
-  int are_you_down[number_of_slaves-2];
-
-  // current pointer
   LinkedList
     * next_work_node = work_list,
     * list_end = NULL;
 
-  // have supervisor so starting at 2
-  for(slave=2; slave<number_of_slaves; ++slave)
+  DEBUG_PRINT(("First work unit: %s", next_work_node->data->filename));
+
+  for(slave=0; slave<number_of_slaves; ++slave)
   {
-    are_you_down[slave-2] = 0; //slaves are all working in the beginning
-    DEBUG_PRINT(("assigning work to slave"));
-
-    if(next_work_node == NULL)
-    {
-      DEBUG_PRINT(("reached the end of the work, breaking!"));
-      break;
-    }
-
-    mw_work_t * work_unit = next_work_node->data;
-
-    send_to_slave(work_unit, f->work_sz, MPI_CHAR, slave, WORK_TAG, MPI_COMM_WORLD);
-
-    // save next_work_node to assigned work
-    assignment_ptrs[slave-2] = next_work_node;
-    assert(assignment_ptrs[slave-2] != NULL);
-    
-    // save start time
-    assignment_time[slave-2] = MPI_Wtime();
-
-    // update next_work_node
-    if(next_work_node->next == NULL)
-    {
-        list_end = next_work_node;
-    }
-    next_work_node=next_work_node->next;
-
-    DEBUG_PRINT(("work sent to slave"));
+    are_you_down[slave] = 0;
+    are_you_working[slave] = 0;
+    assignment_time[slave] = 0;
+    assignment_ptrs[slave] = NULL;
+    reduce_assignment_ptrs[slave] = NULL;
   }
 
-  // send time array to supervisor
-  DEBUG_PRINT(("Sending supervisor first time update"));
-  MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
+  MPI_Request 
+    request_finished_mapping,
+    request_intermediate,
+    request_fail;
 
-  // failure id
-  int failure_id;
+  MPI_Status
+    status_finished_mapping,
+    status_intermediate,
+    status_fail;
 
-  MPI_Status status_fail, status_res;
-  MPI_Request request_fail, request_res;
-  int flag_fail = 0, flag_res = 0;
+  int 
+    failure_id,
+    flag_finished_mapping,
+    flag_intermediate,
+    flag_fail;
 
-  // receive failure from supervisor as non-blocking recv
+  char * intermediate_result_buffer = malloc(sizeof(char) * sizeof(intermediate_t));
+  assert(intermediate_result_buffer != NULL);
+  char nothing;
+
+  MPI_Irecv(intermediate_result_buffer, sizeof(intermediate_t), MPI_CHAR, MPI_ANY_SOURCE, INTERMEDIATE_RESULT_TAG, MPI_COMM_WORLD, &request_intermediate);
+  MPI_Irecv(&nothing, 1, MPI_CHAR, MPI_ANY_SOURCE, FINISHED_MAP_TAG, MPI_COMM_WORLD, &request_finished_mapping);
   MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
 
-  // receive result from workers as non-blocking recv
-  MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &request_res);
-
-  // send units of work while haven't received all results
-  while(num_results_received < num_work_units)
+  int total_maps_processed = 0;
+  while(total_maps_processed < num_map_work_units)
   {
-    // check for flag_fail again
     MPI_Test(&request_fail, &flag_fail, &status_fail);
-
-    // check for flag_res again
-    MPI_Test(&request_res, &flag_res, &status_res);
-    
-    // send work if have failures or got results
-    if (flag_fail)
+    if(flag_fail)
     {
-        // change inactive workers array
-        //inactive_workers[status_fail.MPI_SOURCE-2] = 1;
-        DEBUG_PRINT(("received failure from supervisor, process %d", failure_id));
-
-        // get work_unit that needs to be reassigned
-        LinkedList * work_unit = assignment_ptrs[failure_id];
-
-        if(work_unit != NULL)
-        {
-            DEBUG_PRINT(("Moving assignment at %p to end of the queue", work_unit));
-            move_node_to_end(work_unit);
-            if(next_work_node == NULL)
-            {
-                next_work_node = work_unit;
-            }
-            assert(next_work_node != NULL);
-        }
-        if(assignment_time[failure_id] == 0.0)
-        {
-            DEBUG_PRINT(("Failure on idle process %d. WTF??", failure_id));
-        }
-        if(are_you_down[failure_id] == 1)
-        {
-            DEBUG_PRINT(("Failure on a process which is already failed. WTF??"));
-        }
-        are_you_down[failure_id] = 1; //this slave is considered dead :(
-        assignment_ptrs[failure_id] = NULL;
-        assignment_time[failure_id] = 0.0;
-        MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-        flag_fail = 0;
-        // continue to receive failures from supervisor as non-blocking recv
-        MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
-    }
-    
-    int idle_process = -1, i;
-    for(i=0; i<number_of_slaves-2; ++i)
-    {
-        if(assignment_time[i] == 0.0 && !are_you_down[i])
-        {
-            idle_process = i;
-            break;
-        }
+      //handle a failure
+      //create new irecv
     }
 
-    if(next_work_node != NULL && idle_process > -1)
+    MPI_Test(&request_intermediate, &flag_intermediate, &status_intermediate);
+    if(flag_intermediate)
     {
-        send_to_slave(next_work_node->data, f->work_sz, MPI_CHAR, idle_process+2, WORK_TAG, MPI_COMM_WORLD);
-        assignment_ptrs[idle_process] = next_work_node;
-        assignment_time[idle_process] = MPI_Wtime();
-        MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-        DEBUG_PRINT(("Gave an assignment to previously idle process %d, assignment at %p", idle_process, next_work_node));
-        if(next_work_node->next == NULL)
-        {
-            list_end = next_work_node;
-        }
-        next_work_node = next_work_node->next;
+      handle_intermediate_result(intermediate_result_buffer);
+      MPI_Irecv(intermediate_result_buffer, sizeof(intermediate_t), MPI_CHAR, MPI_ANY_SOURCE, INTERMEDIATE_RESULT_TAG, MPI_COMM_WORLD, &request_intermediate);
     }
 
-    if (flag_res)
+    MPI_Test(&request_finished_mapping, &flag_finished_mapping, &status_finished_mapping);
+    if(flag_finished_mapping)
     {
-      int worker_number = status_res.MPI_SOURCE-2;
-      if(!are_you_down[worker_number]) //If this slave is marked dead, just ignore him
-      {
-        // update number of results received
-        num_results_received++;
+        int worker_id = status_finished_mapping.MPI_SOURCE - 2;
+        a_process_finished_map(worker_id);
+        total_maps_processed++;
+        MPI_Irecv(&nothing, 1, MPI_CHAR, MPI_ANY_SOURCE, FINISHED_MAP_TAG, MPI_COMM_WORLD, &request_finished_mapping);
+    }
 
-        if(next_work_node == NULL && list_end != NULL && list_end->next != NULL)
-        {
-            DEBUG_PRINT(("Found more work to do, now an idle process can get an assignment"));
-            next_work_node = list_end->next;
-            list_end = NULL;
-        }
-        if(next_work_node != NULL)
-        {
-          // get work_unit
-          mw_work_t* work_unit = next_work_node->data;
-
-          // send new unit of work
-          send_to_slave(work_unit, f->work_sz, MPI_CHAR, status_res.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);        
-
-          // update pointer
-          if(next_work_node->next == NULL)
-          {
-              list_end = next_work_node;
-          }
-
-          // update work index for new_pid
-          assignment_ptrs[status_res.MPI_SOURCE-2] = next_work_node;
-          assert(assignment_ptrs[status_res.MPI_SOURCE-2] != NULL);
-          assignment_time[status_res.MPI_SOURCE-2] = MPI_Wtime();
-          // send updated array of times to supervisor
-          MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-          DEBUG_PRINT(("SENT TIME TO SUP"));
-          next_work_node = next_work_node->next;
-          if(next_work_node == NULL)
-          {
-              DEBUG_PRINT(("Reached the end of the work list, should get idle processors after this"));
-          }
-        }
-        else
-        {
-            DEBUG_PRINT(("Worker %d is now idle, I ain't got shit for him to do", worker_number));
-            assignment_time[worker_number] = 0.0;
-            assignment_ptrs[worker_number] = NULL;
-            assert(!are_you_down[worker_number]);
-            MPI_Send(assignment_time, number_of_slaves-2, MPI_DOUBLE, 1, SUPERVISOR_TAG, MPI_COMM_WORLD);
-        }
-      }
-      // continue to receive results from workers as non-blocking recv
-      MPI_Irecv(&received_results[num_results_received], f->res_sz, MPI_CHAR, MPI_ANY_SOURCE, WORK_TAG, MPI_COMM_WORLD, &request_res);      
+    if(next_work_node)
+    {
+      try_to_assign_work(&next_work_node);
     }
   }
 
-  // send kill signal to other processes, including supervisor
-  for(slave=1; slave<number_of_slaves; ++slave)
+  DEBUG_PRINT(("FINISHED MAPPING!"));
+
+  map_reduce_result_t map_reduce_result;
+  MPI_Request request_finished_reduce;
+  MPI_Status status_finished_reduce;
+  int flag_finished_reduce;
+
+  MPI_Irecv(&failure_id, 1, MPI_INT, 1, FAIL_TAG, MPI_COMM_WORLD, &request_fail);
+  MPI_Irecv(&map_reduce_result, sizeof(map_reduce_result_t), MPI_CHAR, MPI_ANY_SOURCE, FINISHED_REDUCE_TAG, MPI_COMM_WORLD, &request_finished_reduce);
+
+  int 
+    total_reduces = g_hash_table_size(intermediate_results),
+    total_reduces_processed = 0;
+
+  while(total_reduces_processed < total_reduces)
   {
-    DEBUG_PRINT(("Murdering slave"));
-    kill_slave(slave);
+      DEBUG_PRINT(("%d out of %d done", total_reduces_processed, total_reduces));
+
+      MPI_Test(&request_fail, &flag_fail, &status_fail);
+      if(flag_fail)
+      {
+        //handle a failure
+        //create new irecv
+      }
+
+      MPI_Test(&request_finished_reduce, &flag_finished_reduce, &status_finished_reduce);
+      if(flag_finished_reduce)
+      {
+          int worker_id = status_finished_reduce.MPI_SOURCE - 2;
+          a_process_finished_reduce(worker_id);
+          total_reduces_processed++;
+          MPI_Irecv(&map_reduce_result, sizeof(map_reduce_result_t), MPI_CHAR, MPI_ANY_SOURCE, FINISHED_REDUCE_TAG, MPI_COMM_WORLD, &request_finished_reduce);
+      }
+      
+      try_to_assign_reduce();
   }
 
-  start_results = MPI_Wtime();
-  int err_code = f->result(num_results_received, received_results);
-  end_results = MPI_Wtime();
+  kill_all_slaves();
 
-  end = MPI_Wtime();
-  
-  DEBUG_PRINT(("all %f s\n", end-start));
-  DEBUG_PRINT(("create %f s\n", end_create-start_create));
-  DEBUG_PRINT(("process %f s\n", end_results-start_results));
+  DEBUG_PRINT(("ALL DONE! processed %d reductions", total_reduces_processed));
 }
 
+void kill_all_slaves()
+{
+  int i;
+  for(i=0; i<number_of_slaves; ++i)
+  {
+    char nothing;
+    MPI_Send(&nothing, 1, MPI_CHAR, i+2, KILL_TAG, MPI_COMM_WORLD);
+  }
+}
 
-void send_to_slave(mw_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm)
+void send_map_to_slave(map_work_t * work, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm)
 {
   DEBUG_PRINT(("Sent! %d", slave));
   MPI_Send(work, size, datatype, slave, tag, comm);
 }
 
-int get_total_units(mw_work_t ** work_list)
+void send_reduce_to_slave(reduce_key_t * key, int size, MPI_Datatype datatype, int slave, int tag, MPI_Comm comm)
 {
-  mw_work_t ** work_unit_counter = work_list;
+  DEBUG_PRINT(("Sent! %d", slave));
+  MPI_Send(key, size, datatype, slave, tag, comm);
+}
+
+int get_total_units(map_work_t ** work_list)
+{
+  map_work_t ** work_unit_counter = work_list;
 
   while(*work_unit_counter != NULL)
   work_unit_counter++;
@@ -270,7 +298,16 @@ int get_total_units(mw_work_t ** work_list)
   return work_unit_counter - work_list;
 }
 
-void kill_slave(int slave)
+LinkedList * create_map_work_list(map_reduce_api_spec * f, int argc, char ** argv)
 {
-  MPI_Send(0, 0, MPI_CHAR, slave, KILL_TAG, MPI_COMM_WORLD);
+  DEBUG_PRINT(("creating map work list..."));
+
+  int start_time = MPI_Wtime();
+  LinkedList * work_list = listFromArray(f->create_initial_work(argc, argv));
+  int end_time = MPI_Wtime();
+  work_creation_time = start_time - end_time;
+
+  DEBUG_PRINT(("created map work in %f seconds!", work_creation_time));
+  return work_list;
 }
+
